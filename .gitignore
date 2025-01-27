@@ -1,3 +1,4 @@
+######### GitHub's default ignore list for Python projects #############
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -169,3 +170,6 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+######### Our own additions #############
+.idea
