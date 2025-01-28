@@ -146,6 +146,8 @@ def download_tafs(stations, from_year, to_year, force_refresh=False):
 
             new_downloads += 1
 
+        os.unlink(tmp_file_path)
+
     if new_downloads:
         print("\rDownloaded {} missing TAFs.            ".format(new_downloads))
 
