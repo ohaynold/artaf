@@ -1,3 +1,5 @@
+"""This is the main functionality of meteostore, downloading, storing, and retrieving TAFs."""
+
 import datetime
 import os
 import os.path

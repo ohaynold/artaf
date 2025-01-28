@@ -1,3 +1,5 @@
+"""Helper functions for meteostore."""
+
 import csv
 import os.path
 from collections import namedtuple
