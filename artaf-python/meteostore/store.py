@@ -136,7 +136,6 @@ def download_tafs(stations, from_year, to_year, force_refresh=False):
                                               datetime.date(year + 1, 1, 1),
                                               fmt="zip")
             # We write to a temporary file and then rename it to ensure the file is written out completely
-            print("\rPackaging TAFs for {}...          ".format(year), end="", flush=True)
             tmp_file_name = os.path.join(tmp_dir_path, sub_file_name + "~")
             with open(tmp_file_name, "wb") as out_file:
                 out_file.write(data)
@@ -147,7 +146,8 @@ def download_tafs(stations, from_year, to_year, force_refresh=False):
         # Now we collect the temporary directory into a ZIP file -- normally we don't compress collections
         # of compressed files, but it turns out that ZIP as delivered from Iowa State is horribly inefficient
         # for many small files. At the same time, I don't want to modify the original files. Thus, we just
-        # compress it again.
+        # compress it again. This may take a little while.
+        print("\rPackaging TAFs for {}...          ".format(year), end="", flush=True)
         with zipfile.ZipFile(tmp_file_path, "w", zipfile.ZIP_LZMA) as new_zip_file:
             for filename in sorted(os.listdir(tmp_dir_path)):
                 with open(os.path.join(tmp_dir_path, filename), "rb") as in_file:
