@@ -1,7 +1,9 @@
 import datetime
 import os
 import os.path
+import re
 import zipfile
+from collections import namedtuple
 
 import pytz
 import requests
@@ -125,7 +127,7 @@ def download_tafs(stations, from_year, to_year, force_refresh=False):
                                               datetime.date(year, 1, 1),
                                               datetime.date(year + 1, 1, 1),
                                               fmt="zip")
-            with zipfile.ZipFile(tmp_file_path, "a",zipfile. ZIP_STORED) as out_zip, \
+            with zipfile.ZipFile(tmp_file_path, "a", zipfile.ZIP_STORED) as out_zip, \
                     out_zip.open(sub_file_name, "w") as out_file:
                 out_file.write(data)
 
@@ -144,6 +146,64 @@ def download_tafs(stations, from_year, to_year, force_refresh=False):
         print("\rDownloaded {} missing TAFs.            ".format(new_downloads))
 
 
+_taf_file_re = re.compile(r"TAF[A-Z]{3}_(\d{4})(\d{2})(\d{2})(\d{2})(\d{2}).txt")
+
+TimeTafRecord = namedtuple("TimeTafRecord", ["time", "text"])
+
+
+def _get_tafs_station(station, data_files):
+    """
+    A helper function for get_tafs that returns a generator of TimeTafRecords for the
+    given station and years. Should not be called outside of get_tafs().
+    :param station: The station for which records are to be returned
+    :param data_files: A dictionary of years and the corresponding ZIP files
+    """
+    previous_taf_date = None
+    for data_file in data_files.values():
+        with data_file.open(station.station + ".zip", "r") as inner_file:
+            with zipfile.ZipFile(inner_file, "r") as inner_zip:
+                for file_name in sorted(inner_zip.namelist()):
+                    match = _taf_file_re.fullmatch(file_name)
+                    date_parts = [int(x) for x in match.groups()]
+                    taf_date = datetime.datetime(date_parts[0], date_parts[1], date_parts[2],
+                                                 date_parts[3], date_parts[4])
+                    # There is an oddity in Iowa State's archives whereby a few files are included twice
+                    if taf_date == previous_taf_date:
+                        continue
+                    assert previous_taf_date is None or taf_date > previous_taf_date
+                    previous_taf_date = taf_date
+                    taf_content = inner_zip.read(file_name).decode("ascii")
+                    yield taf_date, taf_content
+
+
+StationTafRecord = namedtuple("StationTafRecord", ["station", "tafs"])
+
+
+def get_tafs(stations, from_year, to_year):
+    """
+    Get TAFs for the given times and places from the store. Download if need be.
+    The result is a generator of StationTafRecords which in turn contain
+    generators of TimeTafRecords in their tafs field. Results are in chronological order
+    for each station.
+    :param stations: A list of meteostore.StationDesc tuples
+    :param from_year: Year from which to serve data, inclusive
+    :param to_year: Year to which to serve data, inclusive
+    """
+    stations = list(stations)
+    download_tafs(stations, from_year, to_year)
+    years = list(range(from_year, to_year + 1))
+    data_files = {year: zipfile.ZipFile(os.path.join(DATA_PATH, "TAF" + str(year) + ".zip"), "r")
+                  for year in years}
+    for station in stations:
+        yield station, _get_tafs_station(station, data_files)
+
+
 if __name__ == "__main__":
     selected_stations = util.get_station_list()
-    download_tafs(selected_stations, 2024, 2024)
+    i = 0
+    start_time = datetime.datetime.now()
+    for station, taf_records in get_tafs(selected_stations, 2024, 2024):
+        for date, content in taf_records:
+            i += 1
+    end_time = datetime.datetime.now()
+    print("I have {} TAFs. This took me {} seconds.".format(i, (end_time - start_time).total_seconds()))
