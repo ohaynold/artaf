@@ -4,6 +4,7 @@ analysis, stored in config/stations.csv. You can update this list at any later t
 from this script"""
 
 import csv
+import re
 import sys
 from collections import namedtuple
 
@@ -23,6 +24,11 @@ def get_taf_stations():
     request_result.raise_for_status()
 
     json_result = request_result.json()
+
+    # Make sure that product codes are always the last three letters of the station
+    station_regexp = re.compile(r"\d{12}-[A-Z]{4}-[A-Z]{4}\d{2}-TAF([A-Z]{3})(-[A-Z]{3})?")
+    for x in json_result["data"]:
+        assert station_regexp.fullmatch(x["product_id"]).group(1) == x["station"][-3:]
 
     # Station names have inconsistent capitalization. Most are uppercase but some
     # are not. We just make all of them uppercase for consistency.
