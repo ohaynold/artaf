@@ -105,7 +105,7 @@ def download_tafs(stations, from_year, to_year, force_refresh=False):
         if os.path.exists(file_path):
             # If the output file exists and is complete, we're done
             with zipfile.ZipFile(file_path, "r") as old_zip_file:
-                if set(old_zip_file.namelist()) >= set(station_codes):
+                if set(old_zip_file.namelist()) >= set((s + ".zip" for s in station_codes)):
                     continue
                 # If the output file already exists but is incomplete, we'll have to recover
                 # We expand the files into the temporary directory
@@ -136,6 +136,7 @@ def download_tafs(stations, from_year, to_year, force_refresh=False):
                                               datetime.date(year + 1, 1, 1),
                                               fmt="zip")
             # We write to a temporary file and then rename it to ensure the file is written out completely
+            print("\rPackaging TAFs for {}...          ".format(year), end="", flush=True)
             tmp_file_name = os.path.join(tmp_dir_path, sub_file_name + "~")
             with open(tmp_file_name, "wb") as out_file:
                 out_file.write(data)
@@ -143,9 +144,11 @@ def download_tafs(stations, from_year, to_year, force_refresh=False):
 
             new_downloads += 1
 
-        # Now we collect the temporary directory into a ZIP file -- stored, since the contents
-        # are compressed files
-        with zipfile.ZipFile(tmp_file_path, "w", zipfile.ZIP_STORED) as new_zip_file:
+        # Now we collect the temporary directory into a ZIP file -- normally we don't compress collections
+        # of compressed files, but it turns out that ZIP as delivered from Iowa State is horribly inefficient
+        # for many small files. At the same time, I don't want to modify the original files. Thus, we just
+        # compress it again.
+        with zipfile.ZipFile(tmp_file_path, "w", zipfile.ZIP_LZMA) as new_zip_file:
             for filename in sorted(os.listdir(tmp_dir_path)):
                 with open(os.path.join(tmp_dir_path, filename), "rb") as in_file:
                     new_zip_file.writestr(filename, in_file.read())
