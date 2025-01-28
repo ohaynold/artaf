@@ -8,9 +8,9 @@ Autoregressive Behavior of Aviation Weather Forecasts
 # Set up
 To set up the project, clone the repository. You will need the following packages installed:
 
-yaml (provided by PyYAML)
-requests
-pytz
+- yaml (provided by PyYAML)
+- requests
+- pytz
 
 # How to run
 We provide the shell script [runme.sh](runme.sh) that runs the entire analysis (as far as it's developed
