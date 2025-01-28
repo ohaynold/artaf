@@ -9,8 +9,8 @@ from collections import namedtuple
 
 import requests
 
-station_desc = namedtuple("station_desc",
-                          ["station", "name", "latitude", "longitude"])
+StationDesc = namedtuple("station_desc",
+                         ["station", "name", "latitude", "longitude"])
 
 
 def get_taf_stations():
@@ -26,7 +26,7 @@ def get_taf_stations():
 
     # Station names have inconsistent capitalization. Most are uppercase but some
     # are not. We just make all of them uppercase for consistency.
-    result = [station_desc(x["station"], x["name"].upper(), x["lat"], x["lon"])
+    result = [StationDesc(x["station"], x["name"].upper(), x["lat"], x["lon"])
               for x in json_result["data"]]
     result.sort(key=lambda x: x.station)
 
