@@ -20,8 +20,12 @@ parser = lark.Lark(r"""
     taf_nil_content: sp "NIL"
     amd_limitation: /\n {5,6}AMD [^=]*/ 
 
-    preamble: /\d{3} \n[A-Z]{4}\d{2} / (preamble_issued_at)? /( \d{6}( [A-Z]{3})?)?\nTAF[A-Z]{3}\n/
-    preamble_issued_at: aerodrome
+    # This is rather permissive, but the preamble is the envelope, not the message
+    preamble: preamble_first_number preamble_second_number preamble_issued_at /[^=\n]+/* preamble_issue_taf
+    preamble_first_number: /\d{3} \n/ 
+    preamble_second_number: /[A-Z]{4}\d{2} /
+    preamble_issued_at: aerodrome 
+    preamble_issue_taf: /\nTAF[A-Z]{3}\n/
 
     header: "TAF" (sp header_amendment)? "\n" header_issued_for sp header_issued "Z " header_valid_from "/" header_valid_until
     header_issued_for: aerodrome
