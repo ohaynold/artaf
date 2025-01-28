@@ -9,6 +9,7 @@ default:
 # Run on a very limited test dataset to save time
 tiny_data:
   year_from: 2023
+  # noinspection SpellCheckingInspection
   aerodromes:
     - KABE
     - KABI

@@ -32,6 +32,7 @@ def cleanup_datetime(d):
     return datetime.datetime(d.year, d.month, d.day)
 
 
+# noinspection PyShadowingNames
 def get_iowa_state_nws_archive(pil, start_time, end_time, center=None, fmt="text"):
     """
     Download a NWS weather product from the Iowa Environmental Mesonet archive at Iowa State.
@@ -66,6 +67,7 @@ def get_iowa_state_nws_archive(pil, start_time, end_time, center=None, fmt="text
         return r.content
 
 
+# noinspection PyShadowingNames
 def download_tafs(stations, from_year, to_year, force_refresh=False):
     """
     Download all TAFs not yet loaded into our data cache.
@@ -153,6 +155,7 @@ _taf_file_re = re.compile(r"TAF[A-Z]{3}_(\d{4})(\d{2})(\d{2})(\d{2})(\d{2}).txt"
 TimeTafRecord = namedtuple("TimeTafRecord", ["time", "text"])
 
 
+# noinspection PyShadowingNames
 def _get_tafs_station(station, data_files):
     """
     A helper function for get_tafs that returns a generator of TimeTafRecords for the
@@ -181,6 +184,7 @@ def _get_tafs_station(station, data_files):
 StationTafRecord = namedtuple("StationTafRecord", ["station", "tafs"])
 
 
+# noinspection PyShadowingNames
 def get_tafs(stations, from_year, to_year):
     """
     Get TAFs for the given times and places from the store. Download if need be.
