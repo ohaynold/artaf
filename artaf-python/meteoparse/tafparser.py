@@ -12,19 +12,18 @@ import lark
 from enum import Enum
 
 parser = lark.Lark(r"""
-    taf: preamble header (taf_content | taf_nil_content) close
+    taf: preamble header (taf_content | taf_nil_content) (amd_limitation)? close
     taf_optional_content: taf_content
                         | taf_nil_content
-    taf_content: from_group_content from_groups (amd_not_sked | amd_limited)?
+    taf_content: from_group_content from_groups 
     from_groups: ("\n" from_group)*
-    taf_nil_content: " " "NIL"
-    amd_not_sked: /\n {5,6}AMD NOT SKED/ / TIL \d{6}/?
-    amd_limited: /\n {5,6}AMD LTD TO / /[ A-Z]+/ (/\d{4}-\d{4}/)?
+    taf_nil_content: sp "NIL"
+    amd_limitation: /\n {5,6}AMD [^=]*/ 
 
-    preamble: /\d{3} \n[A-Z]{4}\d{2} / preamble_issued_at / \d{6}( [A-Z]{3})?\nTAF[A-Z]{3}\n/
+    preamble: /\d{3} \n[A-Z]{4}\d{2} / (preamble_issued_at)? /( \d{6}( [A-Z]{3})?)?\nTAF[A-Z]{3}\n/
     preamble_issued_at: aerodrome
 
-    header: "TAF" (" " header_amendment)? "\n" header_issued_for " " header_issued "Z " header_valid_from "/" header_valid_until
+    header: "TAF" (sp header_amendment)? "\n" header_issued_for sp header_issued "Z " header_valid_from "/" header_valid_until
     header_issued_for: aerodrome
     header_issued: day_hour_minute
     header_valid_from: day_hour
@@ -50,6 +49,8 @@ parser = lark.Lark(r"""
                   | wind_direction_variable
     wind_direction_degrees: /\d{3}/
     wind_direction_variable: "VRB"
+    # Three digit wind speeds are somewhat common, but some are clearly erroneous, so we can't really
+    # be lenient.
     wind_speed: /\d{2}/
 
     visibility_group: sp visibility_exceeding? visibility_range "SM"
@@ -63,9 +64,9 @@ parser = lark.Lark(r"""
           | clouds_vertical_visibility
           | cloud_layer (sp cloud_layer)*
     clouds_sky_clear: "SKC"
-    clouds_vertical_visibility: "VV" hundreds_feet
+    clouds_vertical_visibility: "VV" hundreds_feet cloud_layer_cumulonimbus?
     cloud_layer: cloud_layer_coverage hundreds_feet cloud_layer_cumulonimbus?
-    cloud_layer_coverage: "FEW" | "BKN" | "OVC" | "SCT"
+    !cloud_layer_coverage: "FEW" | "BKN" | "OVC" | "SCT"
     cloud_layer_cumulonimbus: "CB"
 
     day_hour_minute : /\d{6}/
@@ -138,43 +139,21 @@ def parse_taf(message_time, message):
         transformer = TafTreeTransformer(message_time)
         tree = transformer.transform(tree)
         # print(tree.pretty())
+        return True
     except Exception as e:
-        print("============================")
+        print("\n============================")
         print(message)
         print(e)
+        return False
 
 
 if __name__ == "__main__":
-    for station, raw_tafs in meteostore.get_tafs(meteostore.get_station_list()[:100], 2024, 2024):
+    tafs_parsed = 0
+    tafs_failed = 0
+    for station, raw_tafs in meteostore.get_tafs(meteostore.get_station_list(), 2010, 2024):
         for message_time, message in raw_tafs:
-            parse_taf(message_time, message)
-    #
-    # parsed_tafs = []
-    # files = 0
-    # for f in taf_file_list():
-    #     t = parse_taf(f)
-    #     parsed_tafs += t
-    #     files += 1
-    #     if files % 100 == 0:
-    #         print(files, "parsed", len(parsed_tafs))
-    # print(len(parsed_tafs))
-    # print(parsed_tafs)
-    # with zipfile.ZipFile(os.path.join("data", "ParsedTAFs.csv.zip"), "w", compression=zipfile.ZIP_LZMA) as outzip:
-    #     with outzip.open("ParsedTAFs.csv", "w") as binstream:
-    #         with io.TextIOWrapper(binstream, encoding="ascii") as textstream:
-    #             csvwriter = csv.writer(textstream)
-    #             line = ["center", "aerodrome", "valid_from", "valid_to", "amended"]
-    #             # TODO: Stream through instead of using memory
-    #             # TODO: Throw out amendments that don't change what we care aobut
-    #             # TODO: Decompose TEMPO into normal lines
-    #             # TODO: Convert to reasonable times
-    #             for i in range(0, 10):
-    #                 line += [s + str(i) for s in
-    #                          ["from", "tempo_end", "wind_speed", "wind_direction", "wind_gust", "ceiling"]]
-    #             csvwriter.writerow(line)
-    #             for taf in parsed_tafs:
-    #                 line = [taf["center"], taf["aerodrome"], taf["valid_from"], taf["valid_to"], taf["amended"] if "amended" in taf else ""]
-    #                 for f in taf["forecasts"]:
-    #                     line += [f["from"],  f["tempo_end"] if "tempo_end" in f else "", f["wind_speed"], f["wind_direction"],
-    #                              f["wind_gust"] if "wind_gust" in f else "", f["ceiling"]]
-    #                 csvwriter.writerow(line)
+            if not parse_taf(message_time, message):
+                tafs_failed += 1
+            tafs_parsed +=1
+            if tafs_parsed % 1_000 == 0:
+                print("\r Parsed {} TAFs, failed {}, failure rate {}.     ".format(tafs_parsed, tafs_failed, tafs_failed/tafs_parsed), end="", flush=True)
