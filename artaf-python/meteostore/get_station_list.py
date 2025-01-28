@@ -9,7 +9,7 @@ import sys
 
 import requests
 
-from meteostore import StationDesc
+from meteostore.util import StationDesc
 
 
 def download_taf_stations():
