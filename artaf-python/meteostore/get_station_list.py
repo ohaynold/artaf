@@ -6,15 +6,13 @@ from this script"""
 import csv
 import re
 import sys
-from collections import namedtuple
 
 import requests
 
-StationDesc = namedtuple("station_desc",
-                         ["station", "name", "latitude", "longitude"])
+from meteostore import StationDesc
 
 
-def get_taf_stations():
+def download_taf_stations():
     """
     Get a list of all stations for which TAFs are issued from Iowa State's Mesonet
     :return: Alphabetically sorted list of stations as station_desc tuples
@@ -27,8 +25,9 @@ def get_taf_stations():
 
     # Make sure that product codes are always the last three letters of the station
     station_regexp = re.compile(r"\d{12}-[A-Z]{4}-[A-Z]{4}\d{2}-TAF([A-Z]{3})(-[A-Z]{3})?")
-    for x in json_result["data"]:
-        assert station_regexp.fullmatch(x["product_id"]).group(1) == x["station"][-3:]
+    for station_record in json_result["data"]:
+        assert station_regexp.fullmatch(station_record["product_id"]).group(1) \
+               == station_record["station"][-3:]
 
     # Station names have inconsistent capitalization. Most are uppercase but some
     # are not. We just make all of them uppercase for consistency.
@@ -48,7 +47,7 @@ def get_taf_stations():
 
 
 if __name__ == "__main__":
-    stations = get_taf_stations()
+    stations = download_taf_stations()
     out_csv = csv.writer(sys.stdout)
     out_csv.writerow(["station", "name", "latitude", "longitude"])
     for s in stations:
