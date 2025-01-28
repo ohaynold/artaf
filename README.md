@@ -1,6 +1,17 @@
 # artaf
 Autoregressive Behavior of Aviation Weather Forecasts
 
+# Team members
+- Oliver Haynold
+- Neal Ylitalo
+
+# Set up
+To set up the project, clone the repository. You will need the following packages installed:
+
+yaml (provided by PyYAML)
+requests
+pytz
+
 # How to run
 We provide the shell script [runme.sh](runme.sh) that runs the entire analysis (as far as it's developed
 as of now) all in the correct order. It downloads TAFs and then analyzes them (for now just by counting).
