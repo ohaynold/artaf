@@ -1,67 +1,65 @@
-start: preamble header (taf_content | taf_nil_content) (amd_limitation)? close
-taf_optional_content: taf_content
-                    | taf_nil_content
+start: preamble header (taf_content | TAF_NIL_CONTENT) (AMD_LIMITATION)? CLOSE
 taf_content: from_group_content from_groups
 from_groups: ("\n" from_group)*
-taf_nil_content: sp "NIL"
-amd_limitation: /\n {5,6}AMD [^=]*/
+TAF_NIL_CONTENT: SP "NIL"
+AMD_LIMITATION: /\n {5,6}AMD [^=]*/
+CLOSE: "=" ("\n")*
 
 # This is rather permissive, but the preamble is the envelope, not the message
-preamble: preamble_first_number preamble_second_number preamble_issued_at /[^=\n]+/* preamble_issue_taf
-preamble_first_number: /\d{3} \n/
-preamble_second_number: /[A-Z]{4}\d{2} /
-preamble_issued_at: aerodrome
-preamble_issue_taf: /\nTAF[A-Z]{3}\n/
+preamble: PREAMBLE_FIRST_NUMBER PREAMBLE_SECOND_NUMBER preamble_issued_at /[^=\n]+/* PREAMBLE_ISSUE_TAF
+PREAMBLE_FIRST_NUMBER: /\d{3} \n/
+PREAMBLE_SECOND_NUMBER: /[A-Z]{4}\d{2} /
+preamble_issued_at: AERODROME
+PREAMBLE_ISSUE_TAF: /\nTAF[A-Z]{3}\n/
 
-header: "TAF" (sp header_amendment)? "\n" header_issued_for sp header_issued "Z " header_valid_from "/" header_valid_until
-header_issued_for: aerodrome
-header_issued: day_hour_minute
-header_valid_from: day_hour
-header_valid_until: day_hour
-!header_amendment: "AMD"
+header: "TAF" (SP HEADER_AMENDMENT)? "\n" header_issued_for SP header_issued_at "Z " header_valid_from "/" header_valid_until
+header_issued_for: AERODROME
+header_issued_at: DAY_HOUR_MINUTE
+header_valid_from: DAY_HOUR
+header_valid_until: DAY_HOUR
+HEADER_AMENDMENT: "AMD"
                 | "COR"
 
-from_group: "     FM" day_hour_minute from_group_content
+from_group: "     FM" DAY_HOUR_MINUTE from_group_content
 from_group_content: from_conditions (prob_group | tempo_group)*
-prob_group: sp /PROB(\d){2}/ sp day_hour "/" day_hour optional_conditions
-tempo_group: "\n      TEMPO " day_hour "/" day_hour optional_conditions
+prob_group: SP "PROB" PROB_LIKELIHOOD SP temporary_conditions
+PROB_LIKELIHOOD: /(\d){2}/
+tempo_group: "\n      TEMPO " temporary_conditions
+temporary_conditions: DAY_HOUR "/" DAY_HOUR optional_conditions
 
-close: "=" ("\n")*
+from_conditions: wind_group visibility_group conditions_phenomena SP clouds (SP wind_shear_group)?
+optional_conditions: wind_group? visibility_group? ((SP "NSW")|conditions_phenomena) (SP clouds)? (SP wind_shear_group)?
+conditions_phenomena: (SP phenomenon)*
 
-from_conditions: wind_group visibility_group conditions_phenomena sp clouds (sp wind_shear_group)?
-optional_conditions: wind_group? visibility_group? conditions_nsw_or_phenomena (sp clouds)? (sp wind_shear_group)?
-conditions_phenomena: (sp phenomenon)*
-conditions_nsw_or_phenomena:  (sp "NSW")|conditions_phenomena
-
-wind_group: sp wind_direction wind_speed ("G"wind_speed)? "KT"
-wind_shear_group: "WS" hundreds_feet "/" wind_direction wind_speed "KT"
-wind_direction: wind_direction_degrees
-              | wind_direction_variable
-wind_direction_degrees: /\d{3}/
-wind_direction_variable: "VRB"
+wind_group: SP wind_direction WIND_SPEED ("G"WIND_SPEED)? "KT"
+wind_shear_group: "WS" CLOUDS_ALTITUDE "/" wind_direction WIND_SPEED "KT"
+wind_direction: WIND_DIRECTION_DEGREES
+              | WIND_DIRECTION_VARIABLE
+WIND_DIRECTION_DEGREES: /\d{3}/
+WIND_DIRECTION_VARIABLE: "VRB"
 # Three digit wind speeds are somewhat common, but some are clearly erroneous, so we can't really
 # be lenient.
-wind_speed: /\d{2}/
+WIND_SPEED: /\d{2}/
 
-visibility_group: sp visibility_exceeding? visibility_range "SM"
-visibility_exceeding: "P"
-visibility_range: /\d{1,2}/
+visibility_group: SP VISIBILITY_EXCEEDING? VISIBILITY_RANGE "SM"
+VISIBILITY_EXCEEDING: "P"
+VISIBILITY_RANGE: /\d{1,2}/
                 | /(\d )?\d\/\d/
 
 phenomenon: /[\+-]?([A-Z]{2})+/
 
-clouds: clouds_sky_clear
+clouds: CLOUDS_SKY_CLEAR
       | clouds_vertical_visibility
-      | cloud_layer (sp cloud_layer)*
-clouds_sky_clear: "SKC"
-clouds_vertical_visibility: "VV" hundreds_feet cloud_layer_cumulonimbus?
-cloud_layer: cloud_layer_coverage hundreds_feet cloud_layer_cumulonimbus?
-!cloud_layer_coverage: "FEW" | "BKN" | "OVC" | "SCT"
-cloud_layer_cumulonimbus: "CB"
+      | cloud_layer (SP cloud_layer)*
+CLOUDS_SKY_CLEAR: "SKC"
+clouds_vertical_visibility: "VV" CLOUDS_ALTITUDE CLOUD_LAYER_CUMULONIMBUS?
+cloud_layer: CLOUD_LAYER_COVERAGE CLOUDS_ALTITUDE CLOUD_LAYER_CUMULONIMBUS?
+CLOUD_LAYER_COVERAGE:  "SCT" | "FEW" | "BKN" | "OVC"
+CLOUD_LAYER_CUMULONIMBUS: "CB"
 
-day_hour_minute : /\d{6}/
-aerodrome: /[A-Z]{4}/
-day_hour: /\d{4}/
-hundreds_feet: /\d{3}/
+DAY_HOUR_MINUTE : /\d{6}/
+AERODROME: /[A-Z]{4}/
+DAY_HOUR: /\d{4}/
+CLOUDS_ALTITUDE: /\d{3}/
 
-sp: " " | "\n      "
+SP: " " | "\n      "
