@@ -1,0 +1,67 @@
+start: preamble header (taf_content | taf_nil_content) (amd_limitation)? close
+taf_optional_content: taf_content
+                    | taf_nil_content
+taf_content: from_group_content from_groups
+from_groups: ("\n" from_group)*
+taf_nil_content: sp "NIL"
+amd_limitation: /\n {5,6}AMD [^=]*/
+
+# This is rather permissive, but the preamble is the envelope, not the message
+preamble: preamble_first_number preamble_second_number preamble_issued_at /[^=\n]+/* preamble_issue_taf
+preamble_first_number: /\d{3} \n/
+preamble_second_number: /[A-Z]{4}\d{2} /
+preamble_issued_at: aerodrome
+preamble_issue_taf: /\nTAF[A-Z]{3}\n/
+
+header: "TAF" (sp header_amendment)? "\n" header_issued_for sp header_issued "Z " header_valid_from "/" header_valid_until
+header_issued_for: aerodrome
+header_issued: day_hour_minute
+header_valid_from: day_hour
+header_valid_until: day_hour
+!header_amendment: "AMD"
+                | "COR"
+
+from_group: "     FM" day_hour_minute from_group_content
+from_group_content: from_conditions (prob_group | tempo_group)*
+prob_group: sp /PROB(\d){2}/ sp day_hour "/" day_hour optional_conditions
+tempo_group: "\n      TEMPO " day_hour "/" day_hour optional_conditions
+
+close: "=" ("\n")*
+
+from_conditions: wind_group visibility_group conditions_phenomena sp clouds (sp wind_shear_group)?
+optional_conditions: wind_group? visibility_group? conditions_nsw_or_phenomena (sp clouds)? (sp wind_shear_group)?
+conditions_phenomena: (sp phenomenon)*
+conditions_nsw_or_phenomena:  (sp "NSW")|conditions_phenomena
+
+wind_group: sp wind_direction wind_speed ("G"wind_speed)? "KT"
+wind_shear_group: "WS" hundreds_feet "/" wind_direction wind_speed "KT"
+wind_direction: wind_direction_degrees
+              | wind_direction_variable
+wind_direction_degrees: /\d{3}/
+wind_direction_variable: "VRB"
+# Three digit wind speeds are somewhat common, but some are clearly erroneous, so we can't really
+# be lenient.
+wind_speed: /\d{2}/
+
+visibility_group: sp visibility_exceeding? visibility_range "SM"
+visibility_exceeding: "P"
+visibility_range: /\d{1,2}/
+                | /(\d )?\d\/\d/
+
+phenomenon: /[\+-]?([A-Z]{2})+/
+
+clouds: clouds_sky_clear
+      | clouds_vertical_visibility
+      | cloud_layer (sp cloud_layer)*
+clouds_sky_clear: "SKC"
+clouds_vertical_visibility: "VV" hundreds_feet cloud_layer_cumulonimbus?
+cloud_layer: cloud_layer_coverage hundreds_feet cloud_layer_cumulonimbus?
+!cloud_layer_coverage: "FEW" | "BKN" | "OVC" | "SCT"
+cloud_layer_cumulonimbus: "CB"
+
+day_hour_minute : /\d{6}/
+aerodrome: /[A-Z]{4}/
+day_hour: /\d{4}/
+hundreds_feet: /\d{3}/
+
+sp: " " | "\n      "
