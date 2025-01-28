@@ -141,7 +141,7 @@ def download_tafs(stations, from_year, to_year, force_refresh=False):
             new_downloads += 1
 
     if new_downloads:
-        print("Downloaded {} missing TAFs.            ".format(new_downloads))
+        print("\rDownloaded {} missing TAFs.            ".format(new_downloads))
 
 
 if __name__ == "__main__":

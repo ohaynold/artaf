@@ -8,8 +8,10 @@ def process_data():
     """
     Execute everything in the right order.
     """
+    print("Getting TAFs...")
     stations = meteostore.download_taf_stations()
     meteostore.download_tafs(stations, 2024, 2024)
+    print("Success!")
 
 
 if __name__ == "__main__":
