@@ -94,36 +94,40 @@ def download_tafs(stations, from_year, to_year, force_refresh=False):
 
     for year in range(from_year, to_year + 1):
         file_path = os.path.join(DATA_PATH, "TAF" + str(year) + ".zip")
+        tmp_dir_path = os.path.join(DATA_PATH, "TAF" + str(year) + "~")
         tmp_file_path = file_path + "~"
-        copy_file_path = file_path + "#"
 
         if os.path.exists(file_path) and force_refresh:
             os.unlink(file_path)
         if os.path.exists(tmp_file_path):
             os.unlink(tmp_file_path)
-        if os.path.exists(copy_file_path):
-            os.unlink(copy_file_path)
 
-        stations_already_loaded = set()
         if os.path.exists(file_path):
             # If the output file exists and is complete, we're done
             with zipfile.ZipFile(file_path, "r") as old_zip_file:
                 if set(old_zip_file.namelist()) >= set(station_codes):
                     continue
                 # If the output file already exists but is incomplete, we'll have to recover
-                # Compression is ZIP_STORED since this contains even more ZIP files
-                with zipfile.ZipFile(tmp_file_path, "x", zipfile.ZIP_STORED) as out_zip:
-                    for sub_file in old_zip_file.namelist():
-                        with out_zip.open(sub_file, "w") as out_file, \
-                                old_zip_file.open(sub_file, "r") as in_file:
-                            out_file.write(in_file.read())
-                        stations_already_loaded.add(sub_file)
+                # We expand the files into the temporary directory
+                if not os.path.exists(tmp_dir_path):
+                    os.mkdir(tmp_dir_path)
+                for sub_file in old_zip_file.namelist():
+                    with open(os.path.join(tmp_dir_path, sub_file), "wb") as out_file, \
+                            old_zip_file.open(sub_file, "r") as in_file:
+                        out_file.write(in_file.read())
+
+        # Ensure temporary directory exists and is clear of temporary files
+        if not os.path.exists(tmp_dir_path):
+            os.mkdir(tmp_dir_path)
+        for filename in os.listdir(tmp_dir_path):
+            if filename.endswith("~"):
+                os.unlink(os.path.join(tmp_dir_path, filename))
 
         # Download TAFs for all the stations we don't already have
         for station in station_codes:
             # This means quite a few open and close operations, but we want to
             sub_file_name = station + ".zip"
-            if sub_file_name in stations_already_loaded:
+            if os.path.exists(os.path.join(tmp_dir_path, sub_file_name)):
                 continue
             pil = "TAF" + station[-3:]
             print("\rDownloading {} TAFs for {}...".format(station, year), end="", flush=True)
@@ -131,22 +135,26 @@ def download_tafs(stations, from_year, to_year, force_refresh=False):
                                               datetime.date(year, 1, 1),
                                               datetime.date(year + 1, 1, 1),
                                               fmt="zip")
-            with zipfile.ZipFile(tmp_file_path, "a", zipfile.ZIP_STORED) as out_zip, \
-                    out_zip.open(sub_file_name, "w") as out_file:
+            # We write to a temporary file and then rename it to ensure the file is written out completely
+            tmp_file_name = os.path.join(tmp_dir_path, sub_file_name + "~")
+            with open(tmp_file_name, "wb") as out_file:
                 out_file.write(data)
-
-            # We copy the written archive into another temporary file and then rename
-            # that to the output file. This means a lot of copying, but ensures that
-            # program abort during a long downloading operation leaves us with a clean
-            # archive.
-            with open(tmp_file_path, "rb") as tmp_file, \
-                    open(copy_file_path, "wb") as copy_file:
-                copy_file.write(tmp_file.read())
-            os.rename(copy_file_path, file_path)
+            os.rename(tmp_file_name, os.path.join(tmp_dir_path, sub_file_name))
 
             new_downloads += 1
 
-        os.unlink(tmp_file_path)
+        # Now we collect the temporary directory into a ZIP file -- stored, since the contents
+        # are compressed files
+        with zipfile.ZipFile(tmp_file_path, "w", zipfile.ZIP_STORED) as new_zip_file:
+            for filename in sorted(os.listdir(tmp_dir_path)):
+                with open(os.path.join(tmp_dir_path, filename), "rb") as in_file:
+                    new_zip_file.writestr(filename, in_file.read())
+        os.rename(tmp_file_path, file_path)
+
+        # Now we can get rid of the temporary directory
+        for filename in os.listdir(tmp_dir_path):
+            os.unlink(os.path.join(tmp_dir_path, filename))
+        os.rmdir(tmp_dir_path)
 
     if new_downloads:
         print("\rDownloaded {} missing TAFs.            ".format(new_downloads))
