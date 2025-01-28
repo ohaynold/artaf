@@ -1,0 +1,23 @@
+# Settings that apply to all configurations unless overridden
+general:
+
+# Process our full dataset
+default:
+  year_from: 2000
+  year_to: 2024
+
+# Run on a limited test dataset to save time
+test_data:
+  year_from: 2024
+  year_to: 2024
+  aerodromes:
+    - KABE
+    - KABI
+    - KABQ
+    - KABR
+    - KABY
+    - KACK
+    - KACT
+    - KACV
+    - KACY
+    - KADF

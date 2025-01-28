@@ -34,7 +34,7 @@ def cleanup_datetime(d):
 
 def get_iowa_state_nws_archive(pil, start_time, end_time, center=None, fmt="text"):
     """
-    Download a NWS weather product from Iowa State's archive.
+    Download a NWS weather product from the Iowa Environmental Mesonet archive at Iowa State.
     :param pil: NWS PIL
     :param start_time: A date or datetime specifying the start time from which to download the product.
     :param end_time: A date or datetime specifying the end time to which to download the product.

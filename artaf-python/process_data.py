@@ -1,8 +1,17 @@
 """ This is a script to run the data download and processing in logical order. It should
 be executed with the project directory as the working directory."""
+import os.path
 
 import meteostore
+import yaml
 
+def get_config(config_name):
+    CONFIG_PATH = os.path.join("config", "config.yaml")
+    with open(CONFIG_PATH, "r") as config_file:
+        config_raw = yaml.parse(config_file)
+    config = config_raw["general"]
+    config.update(config_raw[config_name])
+    return config
 
 def process_data():
     """
@@ -15,4 +24,5 @@ def process_data():
 
 
 if __name__ == "__main__":
-    process_data()
+    print(get_config("default"))
+    # process_data()
