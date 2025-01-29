@@ -5,48 +5,48 @@ AMD_LIMITATION: "AMD" /[^=]*/
 CLOSE: "="
 
 # This is rather permissive, but the preamble is the envelope, not the message
-preamble: THREE_DIGITS PREAMBLE_SECOND_NUMBER preamble_issued_in preamble_issued_at? (/[A-Z]{3}/)? PREAMBLE_ISSUE_TAF
-PREAMBLE_SECOND_NUMBER: /[A-Z]{4}\d{2}/
+preamble: THREE_DIGITS /[A-Z]{4}\d{2}/ preamble_issued_in preamble_issued_at? (/[A-Z]{3}/)? PREAMBLE_ISSUE_TAF
+THREE_DIGITS: /\d{3}/
 preamble_issued_in: AERODROME
-preamble_issued_at: SIX_DIGITS
+preamble_issued_at: DAY_HOUR_MINUTE
 PREAMBLE_ISSUE_TAF: /TAF[A-Z]{3}/
 
 header: "TAF" HEADER_AMENDMENT? header_issued_for header_issued_at "Z" header_valid_from "/" header_valid_until
 header_issued_for: AERODROME
-header_issued_at: SIX_DIGITS
-header_valid_from: FOUR_DIGITS
-header_valid_until: FOUR_DIGITS
+header_issued_at: DAY_HOUR_MINUTE
+header_valid_from: DAY_HOUR
+header_valid_until: DAY_HOUR
 HEADER_AMENDMENT: "AMD"
                 | "COR"
 
-from_group: "FM" SIX_DIGITS from_group_content
+from_group: "FM" DAY_HOUR_MINUTE from_group_content
 from_group_content: from_conditions (prob_group | tempo_group)*
 prob_group: "PROB" PROB_LIKELIHOOD temporary_conditions
 PROB_LIKELIHOOD: /(\d){2}/
 tempo_group: "TEMPO" temporary_conditions
-temporary_conditions: FOUR_DIGITS "/" FOUR_DIGITS optional_conditions
+temporary_conditions: DAY_HOUR "/" DAY_HOUR optional_conditions
 
 from_conditions: wind_group visibility_group phenomena_group* clouds wind_shear_group?
-optional_conditions: wind_group? visibility_group? (((phenomena_group* | "NSW") clouds? wind_shear_group?)|"NSW")
+optional_conditions: wind_group? visibility_group? (((phenomena_group* | NSW) clouds? wind_shear_group?)|NSW)
+NSW: "NSW"
 
-wind_group: wind_direction TWO_DIGITS wind_gust_group? "KT"
-wind_gust_group: "G" TWO_DIGITS
-wind_shear_group: "WS" CLOUDS_ALTITUDE "/" wind_direction TWO_DIGITS "KT"
-wind_direction: THREE_DIGITS
+wind_group: wind_direction WIND_SPEED wind_gust_group? "KT"
+wind_gust_group: "G" WIND_SPEED
+wind_shear_group: "WS" CLOUDS_ALTITUDE "/" wind_direction WIND_SPEED "KT"
+wind_direction: WIND_DIRECTION_DEGREES
               | WIND_DIRECTION_VARIABLE
-THREE_DIGITS: /\d{3}/
 WIND_DIRECTION_VARIABLE: "VRB"
 # Three digit wind speeds are somewhat common, but some are clearly erroneous, so we can't really
 # be lenient.
-TWO_DIGITS: /\d{2}/
-ONE_DIGIT: /\d/
+WIND_SPEED: /\d{2}/
+WIND_DIRECTION_DEGREES: /\d{3}/
 
 visibility_group: visibility_exceeding? visibility_range "SM"
 visibility_exceeding: "P"
-visibility_range: TWO_DIGITS
-                | ONE_DIGIT fraction?
-                | fraction
-fraction: ONE_DIGIT "/" ONE_DIGIT
+visibility_range: | VISIBILITY_MILES fraction?
+                  | fraction
+VISIBILITY_MILES: /\d/
+fraction: /\d/ "/" /\d/
 
 phenomena_group: PHENOMENON_INTENSITY? PHENOMENON+
 PHENOMENON_INTENSITY: "+" | "-"
@@ -66,8 +66,8 @@ CLOUDS_ALTITUDE: /\d{3}/
 CLOUD_LAYER_COVERAGE:  "SCT" | "FEW" | "BKN" | "OVC"
 cloud_layer_cumulonimbus: "CB"
 
-SIX_DIGITS : /\d{6}/
-FOUR_DIGITS: /\d{4}/
+DAY_HOUR_MINUTE : /\d{6}/
+DAY_HOUR : /\d{4}/
 AERODROME: /[A-Z]{4}/
 
 %import common.WS
