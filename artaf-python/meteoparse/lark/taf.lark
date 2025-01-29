@@ -1,0 +1,81 @@
+# This is the grammar we're using to parse TAFs, in a modified Extended Backus–Naur form
+#
+# If this looks scary, the documentation for Lark, the parser generator we're using, has
+# its documentation at https://lark-parser.readthedocs.io/en/stable/ .
+# The classical and ultimate book on what's going on here is the famous "Dragon Book,"
+# "Compilers: Principles, Techniques, and Tools" by Alfred Aho et al.
+
+start: preamble header (taf_content | TAF_NIL_CONTENT) (AMD_LIMITATION)? CLOSE
+taf_content: from_group_content from_group*
+TAF_NIL_CONTENT: "NIL"
+AMD_LIMITATION: "AMD" /[^=]*/
+CLOSE: "="
+
+# This is rather permissive, but the preamble is the envelope, not the message
+preamble: THREE_DIGITS /[A-Z]{4}\d{2}/ preamble_issued_in preamble_issued_at? (/[A-Z]{3}/)? PREAMBLE_ISSUE_TAF
+THREE_DIGITS: /\d{3}/
+preamble_issued_in: AERODROME
+preamble_issued_at: DAY_HOUR_MINUTE
+PREAMBLE_ISSUE_TAF: /TAF[A-Z]{3}/
+
+header: "TAF" HEADER_AMENDMENT? header_issued_for header_issued_at "Z" header_valid_from "/" header_valid_until
+header_issued_for: AERODROME
+header_issued_at: DAY_HOUR_MINUTE
+header_valid_from: DAY_HOUR
+header_valid_until: DAY_HOUR
+HEADER_AMENDMENT: "AMD"
+                | "COR"
+
+from_group: "FM" DAY_HOUR_MINUTE from_group_content
+from_group_content: from_conditions (prob_group | tempo_group)*
+prob_group: "PROB" PROB_LIKELIHOOD temporary_conditions
+PROB_LIKELIHOOD: /(\d){2}/
+tempo_group: "TEMPO" temporary_conditions
+temporary_conditions: DAY_HOUR "/" DAY_HOUR optional_conditions
+
+from_conditions: wind_group visibility_group phenomena_group* clouds wind_shear_group?
+optional_conditions: wind_group? visibility_group? (((phenomena_group* | NSW) clouds? wind_shear_group?)|NSW)
+NSW: "NSW"
+
+wind_group: wind_direction WIND_SPEED wind_gust_group? "KT"
+wind_gust_group: "G" WIND_SPEED
+wind_shear_group: "WS" CLOUDS_ALTITUDE "/" wind_direction WIND_SPEED "KT"
+wind_direction: WIND_DIRECTION_DEGREES
+              | WIND_DIRECTION_VARIABLE
+WIND_DIRECTION_VARIABLE: "VRB"
+# Three digit wind speeds are somewhat common, but some are clearly erroneous, so we can't really
+# be lenient.
+WIND_SPEED: /\d{2}/
+WIND_DIRECTION_DEGREES: /\d{3}/
+
+visibility_group: visibility_exceeding? visibility_range "SM"
+visibility_exceeding: "P"
+visibility_range: | VISIBILITY_MILES fraction?
+                  | fraction
+VISIBILITY_MILES: /\d/
+fraction: /\d/ "/" /\d/
+
+phenomena_group: PHENOMENON_INTENSITY? PHENOMENON+
+PHENOMENON_INTENSITY: "+" | "-"
+PHENOMENON: "VC"
+          | "MI" | "PR" | "BC" | "DR" | "BL" | "SH" | "TS" | "FZ"
+          | "DZ" | "RA" | "SN" | "SG" | "IC" | "PL" | "GR" | "GS" | "UP"
+          | "BR" | "FG" | "FU" | "VA" | "DU" | "SA" | "HZ" | "PY"
+          | "PO" | "SQ" | "FC" | "SS" | "DS"
+
+clouds: clouds_sky_clear
+      | clouds_vertical_visibility
+      | cloud_layer+
+clouds_sky_clear: "SKC"
+clouds_vertical_visibility: "VV" CLOUDS_ALTITUDE cloud_layer_cumulonimbus?
+cloud_layer: CLOUD_LAYER_COVERAGE CLOUDS_ALTITUDE cloud_layer_cumulonimbus?
+CLOUDS_ALTITUDE: /\d{3}/
+CLOUD_LAYER_COVERAGE:  "SCT" | "FEW" | "BKN" | "OVC"
+cloud_layer_cumulonimbus: "CB"
+
+DAY_HOUR_MINUTE : /\d{6}/
+DAY_HOUR : /\d{4}/
+AERODROME: /[A-Z]{4}/
+
+%import common.WS
+%ignore WS
