@@ -1,8 +1,10 @@
 """ This is a script to run the data download and processing in logical order. It should
 be executed with the project directory as the working directory."""
 import argparse
+import collections
 import os.path
 
+import coverage
 import yaml
 
 import meteoparse
@@ -26,6 +28,9 @@ def get_config(config_name):
     return config
 
 
+RunConfig = collections.namedtuple("RunConfig", ["stations", "year_from", "year_to", "coverage"])
+
+
 def process_arguments():
     """
     Process command line arguments and load the appropriate configuration to run
@@ -33,6 +38,9 @@ def process_arguments():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", help="select a configuration to run in", default="default")
+    parser.add_argument("--run_coverage",
+                        help="produce a code coverage report from a linear run, not tests",
+                        action="store_true")
     arguments = parser.parse_args()
     config_name = arguments.config
     config = get_config(config_name)
@@ -43,7 +51,7 @@ def process_arguments():
         stations = list(filter(lambda station: station.station in config["aerodromes"], stations))
     print("Running in configuration {} for years from {} through {} with {} aerodromes.".format(
         arguments.config, year_from, year_to, len(stations)))
-    return stations, year_from, year_to
+    return RunConfig(stations=stations, year_from=year_from, year_to=year_to, coverage=arguments.run_coverage)
 
 
 def placeholder_analysis(raw_tafs):
@@ -85,21 +93,42 @@ def placeholder_analysis(raw_tafs):
           .format(records, wind_speed_sum / records, wind_gust_sum / records))
 
 
+class CoverageRunner:
+    def __init__(self, active):
+        self.active = active
+        self.coverage = None
+        if self.active:
+            import coverage
+
+    def __enter__(self):
+        if self.active:
+            self.coverage = coverage.Coverage()
+            self.coverage.start()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.active:
+            self.coverage.stop()
+            self.coverage.save()
+            report_dir = os.path.join("test_results", "execution_coverage")
+            self.coverage.html_report(directory=report_dir)
+
+
 def process_data():
     """
     Execute everything in the right order.
     """
 
-    stations, year_from, year_to = process_arguments()
+    run_config = process_arguments()
 
-    print("Getting TAFs...")
-    raw_tafs = meteostore.get_tafs(stations, year_from, year_to)
+    with CoverageRunner(active=run_config.coverage):
+        print("Getting TAFs...")
+        raw_tafs = meteostore.get_tafs(run_config.stations, run_config.year_from, run_config.year_to)
 
-    # Just a placeholder to do something with our TAFs
-    print("Evaluating TAFs (a placeholder for now)...")
-    placeholder_analysis(raw_tafs)
+        # Just a placeholder to do something with our TAFs
+        print("Evaluating TAFs (a placeholder for now)...")
+        placeholder_analysis(raw_tafs)
 
-    print("Success!")
+        print("Success!")
 
 
 if __name__ == "__main__":
