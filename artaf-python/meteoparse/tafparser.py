@@ -74,17 +74,18 @@ def parse_taf(message_time, message):
     global _parser
     if _parser is None:
         with open(os.path.join(LARK_DIR, "taf.lark"), "r") as lark_grammar:
-            _parser = lark.Lark(lark_grammar)
+            _parser = lark.Lark(lark_grammar, parser="lalr")
     try:
         tree = _parser.parse(message)
         transformer = TafTreeTransformer(message_time)
         tree = transformer.transform(tree)
         # print(tree.pretty())
         return True
-    except Exception as e:
+    except lark.exceptions.UnexpectedInput as e:
         print("\n============================")
         print(message)
         print(e)
+        print(e.get_context(message))
         return False
 
 
