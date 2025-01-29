@@ -61,6 +61,9 @@ def process_data():
     records = 0
     wind_speed_sum = 0
     wind_gust_sum = 0
+    clouds_count = dict(few = 0, sct = 0, bkn = 0, ovc = 0)
+    ceiling_sum = 0
+    ceiling_count = 0
     for _, date_records in raw_tafs:
         for parsed_taf in meteoparse.parse_tafs(date_records):
             if parsed_taf.from_lines:
@@ -69,11 +72,23 @@ def process_data():
                 wind_gust_sum += parsed_taf.from_lines[0].conditions.wind_gust \
                     if parsed_taf.from_lines[0].conditions.wind_gust is not None \
                     else parsed_taf.from_lines[0].conditions.wind_speed
+                
+                for cloud_layer in parsed_taf.from_lines[0].conditions.cloud_layers:
+                    clouds_count[cloud_layer.CLOUD_LAYER_COVERAGE.lower()] += 1
+                    if cloud_layer.CLOUD_LAYER_COVERAGE in ["BKN", "OVC"]: 
+                        ceiling_sum += int(cloud_layer.CLOUDS_ALTITUDE)
+                        ceiling_count += 1 
+                
                 if records % 1000 == 0:
                     print(
-                        "\rI have read {:,} TAFs with an average wind speed of {:.1f} knots, gusting {:.1f}...    " \
-                            .format(records, wind_speed_sum / records, wind_gust_sum / records),
+                        "\rI have read {:,} TAFs with an average wind speed of {:.1f} knots, gusting {:.1f}...    \r" \
+                            .format(records, wind_speed_sum / records, wind_gust_sum / records), 
                         end="", flush=True)
+                    #print(
+                    #    "\rThere are {:,} TAFs forecasting cloud ceilings with an average cloudbase of {:03.0f}   \r" \
+                    #        .format(ceiling_count, ceiling_sum/ceiling_count),
+                    #    end="", flush=True)
+
     print("\rI have finished reading {:,} TAFs with an average wind speed of {:.1f} knots, gusting {:.1f}...    "
           .format(records, wind_speed_sum / records, wind_gust_sum / records))
 

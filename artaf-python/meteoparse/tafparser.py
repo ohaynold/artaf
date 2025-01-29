@@ -26,7 +26,7 @@ ParsedForecast = collections.namedtuple(
 
 WeatherConditions = collections.namedtuple(
     "WeatherConditions",
-    ["wind_speed", "wind_gust"])
+    ["wind_speed", "wind_gust", "cloud_layers"])
 
 FromLine = collections.namedtuple(
     "FromLine",
@@ -100,7 +100,8 @@ class TafTreeTransformer(lark.Transformer):
         wind_group = from_conditions.wind_group
         wind_speed = wind_group.WIND_SPEED.value
         wind_gust = wind_group.wind_gust_group.WIND_SPEED.value if hasattr(wind_group, "wind_gust_group") else None
-        return WeatherConditions(wind_speed=wind_speed, wind_gust=wind_gust)
+        cloud_layers_group = from_conditions.clouds['cloud_layer']
+        return WeatherConditions(wind_speed=wind_speed, wind_gust=wind_gust, cloud_layers=cloud_layers_group)
         # TODO: Unroll TEMPO and PROB changes
         # TODO: Add other elements of group
 
