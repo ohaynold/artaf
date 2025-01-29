@@ -23,15 +23,12 @@ def download_taf_stations():
 
     json_result = request_result.json()
 
-    # Make sure that product codes are always the last three letters of the station
-    station_regexp = re.compile(r"\d{12}-[A-Z]{4}-[A-Z]{4}\d{2}-TAF([A-Z]{3})(-[A-Z]{3})?")
-    for station_record in json_result["data"]:
-        assert station_regexp.fullmatch(station_record["product_id"]).group(1) \
-               == station_record["station"][-3:]
+    station_regexp = re.compile(r"\d{12}-([A-Z]{4})-[A-Z]{4}\d{2}-TAF([A-Z]{3})(-[A-Z]{3})?")
 
     # Station names have inconsistent capitalization. Most are uppercase but some
     # are not. We just make all of them uppercase for consistency.
-    result = [StationDesc(x["station"], x["name"].upper(), x["lat"], x["lon"])
+    result = [StationDesc(x["station"], x["name"].upper(), x["lat"], x["lon"],
+                          station_regexp.fullmatch(x["product_id"]).group(1))
               for x in json_result["data"]]
     result.sort(key=lambda x: x.station)
 
@@ -49,6 +46,6 @@ def download_taf_stations():
 if __name__ == "__main__":
     stations = download_taf_stations()
     out_csv = csv.writer(sys.stdout)
-    out_csv.writerow(["station", "name", "latitude", "longitude"])
+    out_csv.writerow(["station", "name", "latitude", "longitude", "center"])
     for s in stations:
-        out_csv.writerow([s.station, s.name, s.latitude, s.longitude])
+        out_csv.writerow([s.station, s.name, s.latitude, s.longitude, s.center])

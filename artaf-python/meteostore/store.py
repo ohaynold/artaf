@@ -85,9 +85,10 @@ def download_tafs(stations, from_year, to_year, force_refresh=False):
         raise IndexError("I can only download a yearly archive once the year is over.")
 
     # Make sure stations are sane
-    station_codes = [s.station for s in stations]
-    for station in station_codes:
+    station_codes = [(s.station, s.center) for s in stations]
+    for station, center in station_codes:
         assert len(station) == 4 and station.isalpha() and station.isupper()
+        assert len(center) == 4 and center.isalpha() and center.isupper()
 
     os.makedirs(DATA_PATH, exist_ok=True)
     new_downloads = 0
@@ -105,7 +106,7 @@ def download_tafs(stations, from_year, to_year, force_refresh=False):
         if os.path.exists(file_path):
             # If the output file exists and is complete, we're done
             with zipfile.ZipFile(file_path, "r") as old_zip_file:
-                if set(old_zip_file.namelist()) >= set((s + ".zip" for s in station_codes)):
+                if set(old_zip_file.namelist()) >= set((s + ".zip" for s, _ in station_codes)):
                     continue
                 # If the output file already exists but is incomplete, we'll have to recover
                 # We expand the files into the temporary directory
@@ -124,7 +125,7 @@ def download_tafs(stations, from_year, to_year, force_refresh=False):
                 os.unlink(os.path.join(tmp_dir_path, filename))
 
         # Download TAFs for all the stations we don't already have
-        for station in station_codes:
+        for station, center in station_codes:
             # This means quite a few open and close operations, but we want to
             sub_file_name = station + ".zip"
             if os.path.exists(os.path.join(tmp_dir_path, sub_file_name)):
@@ -134,6 +135,7 @@ def download_tafs(stations, from_year, to_year, force_refresh=False):
             data = get_iowa_state_nws_archive(pil,
                                               datetime.date(year, 1, 1),
                                               datetime.date(year + 1, 1, 1),
+                                              center=center,
                                               fmt="zip")
             # We write to a temporary file and then rename it to ensure the file is written out completely
             tmp_file_name = os.path.join(tmp_dir_path, sub_file_name + "~")
