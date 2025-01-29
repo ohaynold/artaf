@@ -9,7 +9,7 @@ import lark
 import meteostore
 
 
-class Amendment_Type(Enum):
+class AmendmentType(Enum):
     CORRECTED = 1
     AMENDED = 2
 
@@ -35,7 +35,83 @@ def next_or_none(generator):
     return None
 
 
+class TreeAccessor:
+    def __init__(self, tree):
+        self.tree = tree
+
+    def __getitem__(self, item):
+        if isinstance(item, slice):
+            res = []
+            for a in self.tree.children[item]:
+                if isinstance(a, lark.Tree):
+                    res.append(TreeAccessor(a))
+                else:
+                    res.append(a)
+            return res
+        if isinstance(item, int):
+            res = self.tree.children[item]
+            if isinstance(res, lark.Tree):
+                return TreeAccessor(res)
+            else:
+                return res
+        res = []
+        for child in self.tree.children:
+            if isinstance(child, lark.Tree):
+                if child.data == item:
+                    res.append(TreeAccessor(child))
+            elif isinstance(child, lark.Token):
+                if child.type == item:
+                    res.append(child)
+            else:
+                raise TypeError("Unexpected type hanging in our Lark tree.")
+        return res
+
+    def __getattr__(self, item):
+        candidates = self[item]
+        if len(candidates) != 1:
+            raise AttributeError("Expected to find exactly one selected child node.")
+        return candidates[0]
+
+    def __len__(self):
+        return len(self.tree.children)
+
+
+class BranchesAccessor:
+    def __init__(self, branches):
+        self.branches = branches
+
+    def __getitem__(self, item):
+        res = []
+        for child in self.branches:
+            if isinstance(child, lark.Tree):
+                if child.data == item:
+                    res.append(TreeAccessor(child))
+            elif isinstance(child, lark.Token):
+                if child.type == item:
+                    res.append(child)
+            else:
+                raise TypeError("Unexpected type hanging in our Lark tree.")
+        return res
+
+    def __getattr__(self, item):
+        candidates = self[item]
+        if len(candidates) != 1:
+            raise AttributeError("Expected to find exactly one selected child node.")
+        return candidates[0]
+
+
+def lark_tree_accessor(item):
+    if isinstance(item, lark.Tree):
+        return TreeAccessor(item)
+    elif isinstance(item, list):
+        return BranchesAccessor(item)
+    else:
+        raise TypeError("Unexpected type hanging in our Lark tree.")
+
+
+# noinspection PyMethodMayBeStatic,PyPep8Naming
 class TafTreeTransformer(lark.Transformer):
+    # noinspection PyTypeChecker
     def __init__(self, issue_date):
         super().__init__(self)
         self.issue_date = issue_date
@@ -49,19 +125,6 @@ class TafTreeTransformer(lark.Transformer):
             return datetime.datetime(self.issue_date.year + 1, 1, day, hour, minute)
 
     @staticmethod
-    def find_branches(args, target):
-        return [x for x in args if isinstance(x, lark.Tree) and x.data == target]
-
-    @staticmethod
-    def find_branch(args, target):
-        branches = [x for x in args if isinstance(x, lark.Tree) and x.data == target]
-        if len(branches) == 0:
-            return None
-        if len(branches) == 1:
-            return branches[0]
-        raise IndexError("Got more than one branch where I expected one.")
-
-    @staticmethod
     def find_leaf(tree, target):
         branches = [x for x in tree.children if isinstance(x, lark.Token) and x.type == target]
         if len(branches) == 0:
@@ -71,22 +134,23 @@ class TafTreeTransformer(lark.Transformer):
         raise IndexError("Got more than one leaf where I expected one.")
 
     def start(self, args):
-        # TODO: ABE is shared between KABE and PABE. Maybe really have to key by center and aerodrome for PILs or re-sort after loading
-        issued_in = str(next(self.find_branch(args, "preamble").find_data("preamble_issued_in")).children[0])
-        aerodrome = str(next(self.find_branch(args, "header").find_data("header_issued_for")).children[0])
-        issued_at = str(next(self.find_branch(args, "header").find_data("header_issued_at")).children[0])
-        valid_from = str(next(self.find_branch(args, "header").find_data("header_valid_from")).children[0])
-        valid_until = str(next(self.find_branch(args, "header").find_data("header_valid_until")).children[0])
-        amendment = self.find_leaf(self.find_branch(args, "header"), "HEADER_AMENDMENT")
+        tree = lark_tree_accessor(args)
+        issued_in = tree.preamble.preamble_issued_in.AERODROME.value
+        header = tree.header
+        aerodrome = header.header_issued_for.AERODROME.value
+        issued_at = header.header_issued_at[0]
+        valid_from = header.header_valid_from[0]
+        valid_until = header.header_valid_until[0]
+        amendment = header.HEADER_AMENDMENT.value if hasattr(header, "HEADER_AMENDMENT") else None
 
-        taf_content = self.find_branch(args, "taf_content")
-        if taf_content:
+        if hasattr(tree, "taf_content"):
+            taf_content = tree.taf_content
             from_line_times = [valid_from]
-            from_lines = [taf_content.children[0]]
-            if len(taf_content.children) > 1:
-                for line in taf_content.children[1:]:
-                    from_line_times.append(line.children[0])
-                    from_lines.append(line.children[1])
+            from_lines = [taf_content[0]]
+            if len(taf_content) > 1:
+                for line in taf_content[1:]:
+                    from_line_times.append(line[0])
+                    from_lines.append(line[1])
             from_line_times.append(valid_until)
             new_from_line = [
                 FromLine(conditions=from_lines[i], valid_from=from_line_times[i], valid_until=from_line_times[i + 1])
@@ -101,9 +165,8 @@ class TafTreeTransformer(lark.Transformer):
         return res
 
     def from_group_content(self, args):
-        conditions = self.find_branch(args, "from_conditions")
-        wind_group = next(conditions.find_data("wind_group"))
-        wind_speed = self.find_leaf(wind_group, "WIND_SPEED")
+        from_conditions = lark_tree_accessor(args).from_conditions
+        wind_speed = from_conditions.wind_group.WIND_SPEED.value
         return WeatherConditions(wind_speed=wind_speed)
         # TODO: Add other elements of group
 
@@ -133,9 +196,9 @@ class TafTreeTransformer(lark.Transformer):
 
     def HEADER_AMENDMENT(self, tok):
         if tok == "COR":
-            return tok.update(value=Amendment_Type.CORRECTED)
+            return tok.update(value=AmendmentType.CORRECTED)
         if tok == "AMD":
-            return tok.update(value=Amendment_Type.AMENDED)
+            return tok.update(value=AmendmentType.AMENDED)
         return IndexError("Unknown amendment type.")
 
 
@@ -143,6 +206,7 @@ _parser = None
 LARK_DIR = os.path.join("artaf-python", "meteoparse", "lark")
 
 
+# noinspection PyShadowingNames
 def parse_taf(message_time, message):
     global _parser
     if _parser is None:
@@ -155,10 +219,10 @@ def parse_taf(message_time, message):
         # print(tree)
         return True
     except lark.exceptions.UnexpectedInput as e:
-        print("\n============================")
-        print(message)
-        print(e)
-        print(e.get_context(message))
+        # print("\n============================")
+        # print(message)
+        # print(e)
+        # print(e.get_context(message))
         return False
     except lark.exceptions.VisitError as e:
         print("\n============================")
@@ -170,7 +234,7 @@ def parse_taf(message_time, message):
 if __name__ == "__main__":
     tafs_parsed = 0
     tafs_failed = 0
-    for station, raw_tafs in meteostore.get_tafs(meteostore.get_station_list(), 2010, 2024):
+    for station, raw_tafs in meteostore.get_tafs(meteostore.get_station_list(), 2009, 2009):
         for message_time, message in raw_tafs:
             if not parse_taf(message_time, message):
                 tafs_failed += 1
