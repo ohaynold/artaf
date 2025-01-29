@@ -216,7 +216,7 @@ def get_tafs(stations, from_year, to_year):
     data_files = {year: zipfile.ZipFile(os.path.join(DATA_PATH, "TAF" + str(year) + ".zip"), "r")
                   for year in years}
     for station in stations:
-        yield station, _get_tafs_station(station, data_files)
+        yield StationTafRecord(station, _get_tafs_station(station, data_files))
 
 
 if __name__ == "__main__":
