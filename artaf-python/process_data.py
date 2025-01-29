@@ -5,6 +5,7 @@ import os.path
 
 import yaml
 
+import meteoparse
 import meteostore
 
 CONFIG_PATH = os.path.join("config", "config.yaml")
@@ -56,11 +57,25 @@ def process_data():
     raw_tafs = meteostore.get_tafs(stations, year_from, year_to)
 
     # Just a placeholder to do something with our TAFs
+    print("Evaluating TAFs (a placeholder for now)...")
     records = 0
+    wind_speed_sum = 0
+    wind_gust_sum = 0
     for _, date_records in raw_tafs:
-        for _ in date_records:
-            records += 1
-    print("I have read {} TAFs.".format(records))
+        for parsed_taf in meteoparse.parse_tafs(date_records):
+            if parsed_taf.from_lines:
+                records += 1
+                wind_speed_sum += parsed_taf.from_lines[0].conditions.wind_speed
+                wind_gust_sum += parsed_taf.from_lines[0].conditions.wind_gust \
+                    if parsed_taf.from_lines[0].conditions.wind_gust is not None \
+                    else parsed_taf.from_lines[0].conditions.wind_speed
+                if records % 1000 == 0:
+                    print(
+                        "\rI have read {:,} TAFs with an average wind speed of {:.1f} knots, gusting {:.1f}...    " \
+                            .format(records, wind_speed_sum / records, wind_gust_sum / records),
+                        end="", flush=True)
+    print("\rI have finished reading {:,} TAFs with an average wind speed of {:.1f} knots, gusting {:.1f}...    "
+          .format(records, wind_speed_sum / records, wind_gust_sum / records))
 
     print("Success!")
 

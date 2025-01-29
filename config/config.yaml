@@ -4,7 +4,7 @@ general:
 
 # Process our full dataset
 default:
-  year_from: 2000
+  year_from: 2010
 
 # Run on a very limited test dataset to save time
 tiny_data:
