@@ -1,9 +1,11 @@
 # This is the grammar we're using to parse TAFs, in a modified Extended Backus–Naur form
 #
-# If this looks scary, the documentation for Lark, the parser generator we're using, has
-# its documentation at https://lark-parser.readthedocs.io/en/stable/ .
+# If this looks scary, the documentation for Lark, the parser generator we're using, lives
+# at https://lark-parser.readthedocs.io/en/stable/ .
 # The classical and ultimate book on what's going on here is the famous "Dragon Book,"
 # "Compilers: Principles, Techniques, and Tools" by Alfred Aho et al.
+# Rules in extended Backus–Naur form are written, as Lark expects, in lowercase, and terminals are
+# written in uppercase.
 
 start: preamble header (taf_content | TAF_NIL_CONTENT) (AMD_LIMITATION)? CLOSE
 taf_content: from_group_content from_group*
