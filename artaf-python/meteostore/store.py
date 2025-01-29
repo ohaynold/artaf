@@ -193,7 +193,7 @@ def _get_tafs_station(station, data_files):
                     assert previous_taf_date is None or taf_date > previous_taf_date
                     previous_taf_date = taf_date
                     taf_content = inner_zip.read(file_name).decode("ascii")
-                    yield taf_date, taf_content
+                    yield TimeTafRecord(taf_date, taf_content)
 
 
 StationTafRecord = namedtuple("StationTafRecord", ["station", "tafs"])

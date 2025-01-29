@@ -2,7 +2,7 @@
 Autoregressive Behavior of Aviation Weather Forecasts
 
 # Team members
-- Oliver Haynold
+- Oliver M. Haynold
 - Neal Ylitalo
 
 # Set up
