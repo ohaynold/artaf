@@ -22,6 +22,7 @@ def safe_open_write(file, mode, *args, new_file_suffix="~"):
         try:
             yield handle
         except Exception as e:
+            handle.close()
             os.unlink(file + new_file_suffix)
             raise e
     os.rename(file + new_file_suffix, file)
