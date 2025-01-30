@@ -18,6 +18,11 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install pylint
+        # Replace by automatic install...
+        pip install lark
+        pip install pyyaml
+        pip install requests
+        pip install pytz
     - name: Analysing the code with pylint
       run: |
         pylint --fail-under=8 $(git ls-files '*.py')
