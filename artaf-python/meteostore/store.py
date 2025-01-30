@@ -1,11 +1,12 @@
 """This is the main functionality of meteostore, downloading, storing, and retrieving TAFs."""
-
+import contextlib
 import datetime
 import os
 import os.path
 import re
 import zipfile
 from collections import namedtuple
+from artaf_util import safe_open_write
 
 import pytz
 import requests
@@ -32,16 +33,18 @@ def cleanup_datetime(d):
     return datetime.datetime(d.year, d.month, d.day)
 
 
-# noinspection PyShadowingNames
 def get_iowa_state_nws_archive(pil, start_time, end_time, center=None, fmt="text"):
     """
     Download a NWS weather product from the Iowa Environmental Mesonet archive at Iowa State.
     :param pil: NWS PIL
-    :param start_time: A date or datetime specifying the start time from which to download the product.
+    :param start_time: A date or datetime specifying the start time from which to download the
+    product.
     :param end_time: A date or datetime specifying the end time to which to download the product.
-    :param center: Can be used to specify the desired center if the same PIL gets published by more than one.
+    :param center: Can be used to specify the desired center if the same PIL gets published by more
+    than one.
     :param fmt: Can be "text", "html", or "zip", for the desired output format.
-    :return: The downloaded weather product, as a string for text or html formats and as bytes for zip format.
+    :return: The downloaded weather product, as a string for text or html formats and as bytes for
+    zip format.
     """
 
     start_time = cleanup_datetime(start_time)
@@ -58,23 +61,22 @@ def get_iowa_state_nws_archive(pil, start_time, end_time, center=None, fmt="text
     if center:
         params["center"] = center
 
-    r = requests.get(base_url, params)
+    r = requests.get(base_url, params, timeout=60)
     r.raise_for_status()
 
     if fmt in ["text", "html"]:
         return r.content.decode(r.encoding)
-    else:
-        return r.content
+    return r.content
 
 
-# noinspection PyShadowingNames
-def download_tafs(stations, from_year, to_year, force_refresh=False):
+def ensure_stations_years_sane(stations, from_year, to_year):
     """
-    Download all TAFs not yet loaded into our data cache.
+    Make sure that we can download for a given set of stations and years as far as obvious
+    sanity checks go.
     :param stations: List of stations as StationDesc tuples
     :param from_year: Year from which to download, inclusive
     :param to_year: Year to which to download, inclusive
-    :param force_refresh: If true, delete old datastore files
+    :return:
     """
     # Make sure dates are sane
     from_year = int(from_year)
@@ -83,12 +85,71 @@ def download_tafs(stations, from_year, to_year, force_refresh=False):
     utcnow = datetime.datetime.now().astimezone(pytz.utc).replace(tzinfo=None)
     if datetime.date(to_year + 1, 1, 3) > utcnow.date():
         raise IndexError("I can only download a yearly archive once the year is over.")
-
     # Make sure stations are sane
     station_codes = [(s.station, s.center) for s in stations]
     for station, center in station_codes:
         assert len(station) == 4 and station.isalpha() and station.isupper()
         assert len(center) == 4 and center.isalpha() and center.isupper()
+    return station_codes, from_year, to_year
+
+
+def _prepare_taf_download(station_codes, file_path, tmp_dir_path, tmp_file_path, force_refresh):
+    """A helper function for download_tafs() to recover from a possible previous failed download
+    and to create and clean up the directory structure"""
+    if os.path.exists(file_path) and force_refresh:
+        os.unlink(file_path)
+    if os.path.exists(tmp_file_path):
+        os.unlink(tmp_file_path)
+    if os.path.exists(file_path):
+        # If the output file exists and is complete, we're done
+        with zipfile.ZipFile(file_path, "r") as old_zip_file:
+            if set(old_zip_file.namelist()) >= set((s + ".zip" for s, _ in station_codes)):
+                return True
+            # If the output file already exists but is incomplete, we'll have to recover
+            # We expand the files into the temporary directory
+            if not os.path.exists(tmp_dir_path):
+                os.mkdir(tmp_dir_path)
+            for sub_file in old_zip_file.namelist():
+                with open(os.path.join(tmp_dir_path, sub_file), "wb") as out_file, \
+                        old_zip_file.open(sub_file, "r") as in_file:
+                    out_file.write(in_file.read())
+    # Ensure temporary directory exists and is clear of temporary files
+    if not os.path.exists(tmp_dir_path):
+        os.mkdir(tmp_dir_path)
+    for filename in os.listdir(tmp_dir_path):
+        if filename.endswith("~"):
+            os.unlink(os.path.join(tmp_dir_path, filename))
+    return False
+
+
+def _finish_download(year, file_path, tmp_dir_path, tmp_file_path):
+    """A helper function for download_tafs() to package up downloaded data and clean up after
+    itself"""
+    # Now we collect the temporary directory into a ZIP file -- normally we don't compress
+    # collections of compressed files, but it turns out that ZIP as delivered from Iowa State is
+    # horribly inefficient for many small files. At the same time, I don't want to modify the
+    # original files. Thus, we just compress it again. This may take a little while.
+    print(f"\rPackaging TAFs for {year}...          ", end="", flush=True)
+    with zipfile.ZipFile(tmp_file_path, "w", zipfile.ZIP_LZMA) as new_zip_file:
+        for filename in sorted(os.listdir(tmp_dir_path)):
+            with open(os.path.join(tmp_dir_path, filename), "rb") as in_file:
+                new_zip_file.writestr(filename, in_file.read())
+    os.rename(tmp_file_path, file_path)
+    # Now we can get rid of the temporary directory
+    for filename in os.listdir(tmp_dir_path):
+        os.unlink(os.path.join(tmp_dir_path, filename))
+    os.rmdir(tmp_dir_path)
+
+
+def download_tafs(stations, from_year, to_year, force_refresh=False):
+    """
+    Download all TAFs not yet loaded into our data cache.
+    :param stations: List of stations as StationDesc tuples
+    :param from_year: Year from which to download, inclusive
+    :param to_year: Year to which to download, inclusive
+    :param force_refresh: If true, delete old datastore files
+    """
+    station_codes, from_year, to_year = ensure_stations_years_sane(stations, from_year, to_year)
 
     os.makedirs(DATA_PATH, exist_ok=True)
     new_downloads = 0
@@ -98,31 +159,10 @@ def download_tafs(stations, from_year, to_year, force_refresh=False):
         tmp_dir_path = os.path.join(DATA_PATH, "TAF" + str(year) + "~")
         tmp_file_path = file_path + "~"
 
-        if os.path.exists(file_path) and force_refresh:
-            os.unlink(file_path)
-        if os.path.exists(tmp_file_path):
-            os.unlink(tmp_file_path)
-
-        if os.path.exists(file_path):
-            # If the output file exists and is complete, we're done
-            with zipfile.ZipFile(file_path, "r") as old_zip_file:
-                if set(old_zip_file.namelist()) >= set((s + ".zip" for s, _ in station_codes)):
-                    continue
-                # If the output file already exists but is incomplete, we'll have to recover
-                # We expand the files into the temporary directory
-                if not os.path.exists(tmp_dir_path):
-                    os.mkdir(tmp_dir_path)
-                for sub_file in old_zip_file.namelist():
-                    with open(os.path.join(tmp_dir_path, sub_file), "wb") as out_file, \
-                            old_zip_file.open(sub_file, "r") as in_file:
-                        out_file.write(in_file.read())
-
-        # Ensure temporary directory exists and is clear of temporary files
-        if not os.path.exists(tmp_dir_path):
-            os.mkdir(tmp_dir_path)
-        for filename in os.listdir(tmp_dir_path):
-            if filename.endswith("~"):
-                os.unlink(os.path.join(tmp_dir_path, filename))
+        if _prepare_taf_download(station_codes, file_path, tmp_dir_path, tmp_file_path,
+                                 force_refresh):
+            # We're already done
+            continue
 
         # Download TAFs for all the stations we don't already have
         for station, center in station_codes:
@@ -130,39 +170,22 @@ def download_tafs(stations, from_year, to_year, force_refresh=False):
             sub_file_name = station + ".zip"
             if os.path.exists(os.path.join(tmp_dir_path, sub_file_name)):
                 continue
-            pil = "TAF" + station[-3:]
-            print("\rDownloading {} TAFs for {}...".format(station, year), end="", flush=True)
-            data = get_iowa_state_nws_archive(pil,
+
+            print(f"\rDownloading {station} TAFs for {year}...", end="", flush=True)
+            data = get_iowa_state_nws_archive("TAF" + station[-3:],
                                               datetime.date(year, 1, 1),
                                               datetime.date(year + 1, 1, 1),
                                               center=center,
                                               fmt="zip")
-            # We write to a temporary file and then rename it to ensure the file is written out completely
-            tmp_file_name = os.path.join(tmp_dir_path, sub_file_name + "~")
-            with open(tmp_file_name, "wb") as out_file:
+            with safe_open_write(os.path.join(tmp_dir_path, sub_file_name), "wb") as out_file:
                 out_file.write(data)
-            os.rename(tmp_file_name, os.path.join(tmp_dir_path, sub_file_name))
 
             new_downloads += 1
 
-        # Now we collect the temporary directory into a ZIP file -- normally we don't compress collections
-        # of compressed files, but it turns out that ZIP as delivered from Iowa State is horribly inefficient
-        # for many small files. At the same time, I don't want to modify the original files. Thus, we just
-        # compress it again. This may take a little while.
-        print("\rPackaging TAFs for {}...          ".format(year), end="", flush=True)
-        with zipfile.ZipFile(tmp_file_path, "w", zipfile.ZIP_LZMA) as new_zip_file:
-            for filename in sorted(os.listdir(tmp_dir_path)):
-                with open(os.path.join(tmp_dir_path, filename), "rb") as in_file:
-                    new_zip_file.writestr(filename, in_file.read())
-        os.rename(tmp_file_path, file_path)
-
-        # Now we can get rid of the temporary directory
-        for filename in os.listdir(tmp_dir_path):
-            os.unlink(os.path.join(tmp_dir_path, filename))
-        os.rmdir(tmp_dir_path)
+        _finish_download(year, file_path, tmp_dir_path, tmp_file_path)
 
     if new_downloads:
-        print("\rDownloaded {} missing TAFs.            ".format(new_downloads))
+        print(f"\rDownloaded {new_downloads} missing TAFs.            ")
 
 
 _taf_file_re = re.compile(r"TAF[A-Z]{3}_(\d{4})(\d{2})(\d{2})(\d{2})(\d{2}).txt")
@@ -187,7 +210,8 @@ def _get_tafs_station(station, data_files):
                     date_parts = [int(x) for x in match.groups()]
                     taf_date = datetime.datetime(date_parts[0], date_parts[1], date_parts[2],
                                                  date_parts[3], date_parts[4])
-                    # There is an oddity in Iowa State's archives whereby a few files are included twice
+                    # There is an oddity in Iowa State's archives whereby a few files are
+                    # included twice
                     if taf_date == previous_taf_date:
                         continue
                     assert previous_taf_date is None or taf_date > previous_taf_date
@@ -213,18 +237,22 @@ def get_tafs(stations, from_year, to_year):
     stations = list(stations)
     download_tafs(stations, from_year, to_year)
     years = list(range(from_year, to_year + 1))
-    data_files = {year: zipfile.ZipFile(os.path.join(DATA_PATH, "TAF" + str(year) + ".zip"), "r")
-                  for year in years}
-    for station in stations:
-        yield StationTafRecord(station, _get_tafs_station(station, data_files))
+    with contextlib.ExitStack() as stack:
+        data_files = {
+            year: stack.enter_context(
+                zipfile.ZipFile(os.path.join(DATA_PATH, "TAF" + str(year) + ".zip"), "r"))
+            for year in years}
+        for a_station in stations:
+            yield StationTafRecord(a_station, _get_tafs_station(a_station, data_files))
 
 
 if __name__ == "__main__":
     selected_stations = util.get_station_list()
     i = 0
-    start_time = datetime.datetime.now()
-    for station, taf_records in get_tafs(selected_stations, 2024, 2024):
+    my_start_time = datetime.datetime.now()
+    for _, taf_records in get_tafs(selected_stations, 2024, 2024):
         for date, content in taf_records:
             i += 1
-    end_time = datetime.datetime.now()
-    print("I have {} TAFs. This took me {} seconds.".format(i, (end_time - start_time).total_seconds()))
+    my_end_time = datetime.datetime.now()
+    print(
+        f"I have {i} TAFs. This took me {((my_end_time - my_start_time).total_seconds())} seconds.")

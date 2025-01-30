@@ -18,7 +18,7 @@ def download_taf_stations():
     :return: Alphabetically sorted list of stations as station_desc tuples
     """
     request_url = "https://mesonet.agron.iastate.edu/api/1/nws/taf_overview.json"
-    request_result = requests.get(request_url)
+    request_result = requests.get(request_url, timeout=60)
     request_result.raise_for_status()
 
     json_result = request_result.json()
