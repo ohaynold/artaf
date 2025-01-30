@@ -16,11 +16,12 @@ CONFIG_PATH = os.path.join("config", "config.yaml")
 def get_config(config_name):
     """
     Load the configuration with the given name from config/config.yaml.
-    We first load the configuration "general" and then override with values from the specified configuration.
+    We first load the configuration "general" and then override with values from the specified
+    configuration.
     :param config_name: Name of the configuration to be loaded
     :return: A dictionary with configuration parameters
     """
-    with open(CONFIG_PATH, "r") as config_file:
+    with open(CONFIG_PATH, "r", encoding="ascii") as config_file:
         config_raw = yaml.safe_load(config_file)
     config = config_raw["general"] if config_raw["general"] else {}
     if config_raw[config_name]:
@@ -49,9 +50,10 @@ def process_arguments():
     stations = meteostore.get_station_list()
     if "aerodromes" in config:
         stations = list(filter(lambda station: station.station in config["aerodromes"], stations))
-    print("Running in configuration {} for years from {} through {} with {} aerodromes.".format(
-        arguments.config, year_from, year_to, len(stations)))
-    return RunConfig(stations=stations, year_from=year_from, year_to=year_to, coverage=arguments.run_coverage)
+    print(f"Running in configuration {arguments.config} for years from {year_from} through "
+          f"{year_to} with {len(stations)} aerodromes.")
+    return RunConfig(stations=stations, year_from=year_from, year_to=year_to,
+                     coverage=arguments.run_coverage)
 
 
 def placeholder_analysis(raw_tafs):
@@ -62,7 +64,7 @@ def placeholder_analysis(raw_tafs):
     records = 0
     wind_speed_sum = 0
     wind_gust_sum = 0
-    clouds_count = dict(few=0, sct=0, bkn=0, ovc=0)
+    clouds_count = {"few":0, "sct":0, "bkn":0, "ovc":0}
     ceiling_sum = 0
     ceiling_count = 0
     for _, date_records in raw_tafs:
@@ -81,19 +83,21 @@ def placeholder_analysis(raw_tafs):
                         ceiling_count += 1
 
                 if records % 1000 == 0:
-                    print(
-                        "\rRead {:,} TAFs with an avg. wind speed of {:.1f} knots, gusting {:.1f}...   " \
-                            .format(records, wind_speed_sum / records, wind_gust_sum / records),
-                        end="", flush=True)
+                    print(f"\rRead {records:,} TAFs with an avg. wind speed of"
+                          f" {(wind_speed_sum / records):.1f} knots, "
+                          f"gusting {(wind_gust_sum / records):.1f}...   ", end="", flush=True)
                     # print(
-                    #    "\rThere are {:,} TAFs forecasting cloud ceilings with an average cloudbase of {:03.0f}   " \
+                    #    "\rThere are {:,} TAFs forecasting cloud ceilings with an average "
+                    #    "cloudbase of {:03.0f}   " \
                     #        .format(ceiling_count, ceiling_sum/ceiling_count),
                     #    end="", flush=True)
-    print("\rFinished reading {:,} TAFs with an avg. wind speed of {:.1f} knots, gusting {:.1f}...    "
-          .format(records, wind_speed_sum / records, wind_gust_sum / records))
+    print(f"\rFinished reading {records:,} TAFs with an avg. wind speed of "
+          f"{(wind_speed_sum / records):.1f} knots, gusting {(wind_gust_sum / records):.1f}...    ")
 
 
 class CoverageRunner:
+    """Run a coverage test for us. Probably move this to the command-line version once
+    we set up a formal testing infrastructure"""
     def __init__(self, active):
         self.active = active
         self.coverage = None
@@ -122,7 +126,8 @@ def process_data():
 
     with CoverageRunner(active=run_config.coverage):
         print("Getting TAFs...")
-        raw_tafs = meteostore.get_tafs(run_config.stations, run_config.year_from, run_config.year_to)
+        raw_tafs = meteostore.get_tafs(run_config.stations, run_config.year_from,
+                                       run_config.year_to)
 
         # Just a placeholder to do something with our TAFs
         print("Evaluating TAFs (a placeholder for now)...")

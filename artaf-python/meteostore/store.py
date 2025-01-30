@@ -37,11 +37,14 @@ def get_iowa_state_nws_archive(pil, start_time, end_time, center=None, fmt="text
     """
     Download a NWS weather product from the Iowa Environmental Mesonet archive at Iowa State.
     :param pil: NWS PIL
-    :param start_time: A date or datetime specifying the start time from which to download the product.
+    :param start_time: A date or datetime specifying the start time from which to download the
+    product.
     :param end_time: A date or datetime specifying the end time to which to download the product.
-    :param center: Can be used to specify the desired center if the same PIL gets published by more than one.
+    :param center: Can be used to specify the desired center if the same PIL gets published by more
+    than one.
     :param fmt: Can be "text", "html", or "zip", for the desired output format.
-    :return: The downloaded weather product, as a string for text or html formats and as bytes for zip format.
+    :return: The downloaded weather product, as a string for text or html formats and as bytes for
+    zip format.
     """
 
     start_time = cleanup_datetime(start_time)
@@ -58,13 +61,12 @@ def get_iowa_state_nws_archive(pil, start_time, end_time, center=None, fmt="text
     if center:
         params["center"] = center
 
-    r = requests.get(base_url, params)
+    r = requests.get(base_url, params, timeout=60)
     r.raise_for_status()
 
     if fmt in ["text", "html"]:
         return r.content.decode(r.encoding)
-    else:
-        return r.content
+    return r.content
 
 
 # noinspection PyShadowingNames
@@ -131,13 +133,14 @@ def download_tafs(stations, from_year, to_year, force_refresh=False):
             if os.path.exists(os.path.join(tmp_dir_path, sub_file_name)):
                 continue
             pil = "TAF" + station[-3:]
-            print("\rDownloading {} TAFs for {}...".format(station, year), end="", flush=True)
+            print(f"\rDownloading {station} TAFs for {year}...", end="", flush=True)
             data = get_iowa_state_nws_archive(pil,
                                               datetime.date(year, 1, 1),
                                               datetime.date(year + 1, 1, 1),
                                               center=center,
                                               fmt="zip")
-            # We write to a temporary file and then rename it to ensure the file is written out completely
+            # We write to a temporary file and then rename it to ensure the file is written out
+            # completely
             tmp_file_name = os.path.join(tmp_dir_path, sub_file_name + "~")
             with open(tmp_file_name, "wb") as out_file:
                 out_file.write(data)
@@ -145,11 +148,11 @@ def download_tafs(stations, from_year, to_year, force_refresh=False):
 
             new_downloads += 1
 
-        # Now we collect the temporary directory into a ZIP file -- normally we don't compress collections
-        # of compressed files, but it turns out that ZIP as delivered from Iowa State is horribly inefficient
-        # for many small files. At the same time, I don't want to modify the original files. Thus, we just
-        # compress it again. This may take a little while.
-        print("\rPackaging TAFs for {}...          ".format(year), end="", flush=True)
+        # Now we collect the temporary directory into a ZIP file -- normally we don't compress
+        # collections of compressed files, but it turns out that ZIP as delivered from Iowa State is
+        # horribly inefficient for many small files. At the same time, I don't want to modify the
+        # original files. Thus, we just compress it again. This may take a little while.
+        print(f"\rPackaging TAFs for {year}...          ", end="", flush=True)
         with zipfile.ZipFile(tmp_file_path, "w", zipfile.ZIP_LZMA) as new_zip_file:
             for filename in sorted(os.listdir(tmp_dir_path)):
                 with open(os.path.join(tmp_dir_path, filename), "rb") as in_file:
@@ -162,7 +165,7 @@ def download_tafs(stations, from_year, to_year, force_refresh=False):
         os.rmdir(tmp_dir_path)
 
     if new_downloads:
-        print("\rDownloaded {} missing TAFs.            ".format(new_downloads))
+        print(f"\rDownloaded {new_downloads} missing TAFs.            ")
 
 
 _taf_file_re = re.compile(r"TAF[A-Z]{3}_(\d{4})(\d{2})(\d{2})(\d{2})(\d{2}).txt")
@@ -187,7 +190,8 @@ def _get_tafs_station(station, data_files):
                     date_parts = [int(x) for x in match.groups()]
                     taf_date = datetime.datetime(date_parts[0], date_parts[1], date_parts[2],
                                                  date_parts[3], date_parts[4])
-                    # There is an oddity in Iowa State's archives whereby a few files are included twice
+                    # There is an oddity in Iowa State's archives whereby a few files are
+                    # included twice
                     if taf_date == previous_taf_date:
                         continue
                     assert previous_taf_date is None or taf_date > previous_taf_date
@@ -227,4 +231,4 @@ if __name__ == "__main__":
         for date, content in taf_records:
             i += 1
     end_time = datetime.datetime.now()
-    print("I have {} TAFs. This took me {} seconds.".format(i, (end_time - start_time).total_seconds()))
+    print(f"I have {i} TAFs. This took me {((end_time - start_time).total_seconds())} seconds.")

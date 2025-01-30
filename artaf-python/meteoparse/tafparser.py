@@ -1,6 +1,6 @@
-"""This is the parser for TAFs. Function parse_taf() does all the work. We're using Lark as our parser
-generator, in the LALR mode for speed. In addition to the grammar in lark/taf.lark, class
- TafTreeTransformer does the remaining heave lifting of building Pythonic output objects."""
+"""This is the parser for TAFs. Function parse_taf() does all the work. We're using Lark as our
+parser generator, in the LALR mode for speed. In addition to the grammar in lark/taf.lark, class
+TafTreeTransformer does the remaining heave lifting of building Pythonic output objects."""
 
 import collections
 import datetime
@@ -15,6 +15,7 @@ from meteoparse.tree_accessor import lark_tree_accessor
 
 
 class AmendmentType(Enum):
+    """Type of a TAF amendment"""
     CORRECTED = 1
     AMENDED = 2
 
@@ -34,7 +35,9 @@ FromLine = collections.namedtuple(
 )
 
 
+# The case of the methods is given by the conventions expected by Lark
 # noinspection PyMethodMayBeStatic,PyPep8Naming
+# pragma pylint: disable=invalid-name
 class TafTreeTransformer(lark.Transformer):
     """
     To be used within Lark to transform abstract syntax trees into ParsedForecast objects.
@@ -46,15 +49,17 @@ class TafTreeTransformer(lark.Transformer):
         self.issue_date = issue_date
 
     def make_datetime_from_day_hour_minute(self, day, hour, minute):
+        """Turns a DDHHMM time specification as found in TAFs into a proper datetime"""
         if day >= self.issue_date.day:
             return datetime.datetime(self.issue_date.year, self.issue_date.month, day, hour, minute)
-        elif self.issue_date.month < 12:
-            return datetime.datetime(self.issue_date.year, self.issue_date.month + 1, day, hour, minute)
-        else:
-            return datetime.datetime(self.issue_date.year + 1, 1, day, hour, minute)
+        if self.issue_date.month < 12:
+            return datetime.datetime(self.issue_date.year, self.issue_date.month + 1,
+                                     day, hour, minute)
+        return datetime.datetime(self.issue_date.year + 1, 1, day, hour, minute)
 
     # noinspection GrazieInspection
     def start(self, branches):
+        """Transform the topmost node of the AST, i.e., the entire TAF"""
         tree = lark_tree_accessor(branches)
 
         # Extract header information
@@ -66,8 +71,8 @@ class TafTreeTransformer(lark.Transformer):
         valid_until = header.header_valid_until.DAY_HOUR.value
         amendment = header.HEADER_AMENDMENT.value if hasattr(header, "HEADER_AMENDMENT") else None
 
-        # Copy the from lines with the actual forecasts and for simplicity give each one a start and an
-        # end datetime.
+        # Copy the from lines with the actual forecasts and for simplicity give each one a start
+        # and an end datetime.
         if hasattr(tree, "taf_content"):
             taf_content = tree.taf_content
             from_line_times = [valid_from]
@@ -78,7 +83,8 @@ class TafTreeTransformer(lark.Transformer):
                     from_lines.append(line[1])
             from_line_times.append(valid_until)
             new_from_line = [
-                FromLine(conditions=from_lines[i], valid_from=from_line_times[i], valid_until=from_line_times[i + 1])
+                FromLine(conditions=from_lines[i], valid_from=from_line_times[i],
+                         valid_until=from_line_times[i + 1])
                 for i in range(len(from_lines))]
         else:
             new_from_line = None
@@ -91,24 +97,29 @@ class TafTreeTransformer(lark.Transformer):
 
     def from_group_content(self, branches):
         """
-        Parse from groups. This is where most of the interesting weather information is and likely the right
-        place to come if you want to extend functionality.
+        Parse from groups. This is where most of the interesting weather information is and likely
+        the right place to come if you want to extend functionality.
         :param branches: A list of lark.Tree or lark.Token objects
         :return: WeatherCondition tuple
         """
         from_conditions = lark_tree_accessor(branches).from_conditions
         wind_group = from_conditions.wind_group
         wind_speed = wind_group.WIND_SPEED.value
-        wind_gust = wind_group.wind_gust_group.WIND_SPEED.value if hasattr(wind_group, "wind_gust_group") else None
+        wind_gust = wind_group.wind_gust_group.WIND_SPEED.value \
+            if hasattr(wind_group, "wind_gust_group") \
+            else None
         cloud_layers_group = from_conditions.clouds['cloud_layer']
-        return WeatherConditions(wind_speed=wind_speed, wind_gust=wind_gust, cloud_layers=cloud_layers_group)
+        return WeatherConditions(wind_speed=wind_speed, wind_gust=wind_gust,
+                                 cloud_layers=cloud_layers_group)
         # TODO: Unroll TEMPO and PROB changes
         # TODO: Add other elements of group
 
     def WIND_SPEED(self, token):
+        """Wind speed as an integer in knots"""
         return token.update(value=int(token.value))
 
     def DAY_HOUR_MINUTE(self, token):
+        """Date and time from DDHHMM specification, always in UTC"""
         s = token.value
         day = int(s[0:2])
         hour = int(s[2:4])
@@ -116,6 +127,7 @@ class TafTreeTransformer(lark.Transformer):
         return token.update(value=self.make_datetime_from_day_hour_minute(day, hour, minute))
 
     def DAY_HOUR(self, token):
+        """Date and time from DDHH specification, always in UTC"""
         s = token.value
         day = int(s[0:2])
         hour = int(s[2:4])
@@ -134,6 +146,7 @@ class TafTreeTransformer(lark.Transformer):
         return token.update(value=res)
 
     def HEADER_AMENDMENT(self, token):
+        """Header amendment AMD or COR"""
         if token == "COR":
             return token.update(value=AmendmentType.CORRECTED)
         if token == "AMD":
@@ -141,20 +154,27 @@ class TafTreeTransformer(lark.Transformer):
         return IndexError("Unknown amendment type.")
 
 
-_parser = None
+_PARSER = None
 LARK_DIR = os.path.join("artaf-python", "meteoparse", "lark")
 
 
 # noinspection PyShadowingNames
 def parse_taf(message_time, message):
+    """
+    Parse a TAF
+    :param message_time: Datetime of the TAF in UTC. Knowledge of the current date is presumed in
+    TAFs' abbreviated notation.
+    :param message: Raw test of the TAF
+    :return: ParsedForecast with the TAF's content
+    """
     # The parser is expensive to generate, so we memoize it
-    global _parser
-    if _parser is None:
-        with open(os.path.join(LARK_DIR, "taf.lark"), "r") as lark_grammar:
-            _parser = lark.Lark(lark_grammar, parser="lalr")
+    global _PARSER
+    if _PARSER is None:
+        with open(os.path.join(LARK_DIR, "taf.lark"), "r", encoding="ascii") as lark_grammar:
+            _PARSER = lark.Lark(lark_grammar, parser="lalr")
 
     try:
-        tree = _parser.parse(message)
+        tree = _PARSER.parse(message)
         transformer = TafTreeTransformer(message_time)
         tree = transformer.transform(tree)
         # print(tree)
@@ -170,7 +190,8 @@ def parse_taf(message_time, message):
 def parse_tafs(taf_sequence):
     """
     Parse a sequence of raw TAFs and make a sequence of ParsedForecast tuples out of them
-    :param taf_sequence: a sequence of datetime.datetime, str tuples with the time and content of the raw TAF
+    :param taf_sequence: a sequence of datetime.datetime, str tuples with the time and content of
+    the raw TAF
     :return: a sequence of ParsedForecast tuples
     """
     for taf_date, taf_text in taf_sequence:
@@ -188,7 +209,5 @@ if __name__ == "__main__":
             print(taf)
             tafs_parsed += 1
             if tafs_parsed % 1000 == 0:
-                print("\r Parsed {:,} TAFs.".format(tafs_parsed),
-                      end="",
-                      flush=True)
+                print(f"\r Parsed {tafs_parsed:,} TAFs.", end="", flush=True)
     print("Done.")
