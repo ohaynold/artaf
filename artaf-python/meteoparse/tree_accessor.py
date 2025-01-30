@@ -9,7 +9,7 @@ tree elements as its argument.
 import lark
 
 
-class AbstractTreeAccessor:
+class AbstractTreeAccessor:  #pylint: disable=too-few-public-methods
     """
     Children of these class are meant to access a lark.Tree in a more convenient and Pythonic
     format.
@@ -40,7 +40,7 @@ class TreeAccessor(AbstractTreeAccessor):
     def __init__(self, tree):
         self.tree = tree
 
-    def __getitem__(self, item):
+    def __getitem__(self, item): # pylint: disable=too-many-branches
         if isinstance(item, slice):
             res = []
             for a in self.tree.children[item]:

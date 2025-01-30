@@ -4,7 +4,6 @@ import argparse
 import collections
 import os.path
 
-import coverage
 import yaml
 
 import meteoparse
@@ -64,7 +63,7 @@ def placeholder_analysis(raw_tafs):
     records = 0
     wind_speed_sum = 0
     wind_gust_sum = 0
-    clouds_count = {"few":0, "sct":0, "bkn":0, "ovc":0}
+    clouds_count = {"few": 0, "sct": 0, "bkn": 0, "ovc": 0}
     ceiling_sum = 0
     ceiling_count = 0
     for _, date_records in raw_tafs:
@@ -95,14 +94,17 @@ def placeholder_analysis(raw_tafs):
           f"{(wind_speed_sum / records):.1f} knots, gusting {(wind_gust_sum / records):.1f}...    ")
 
 
+# We'll get rid of this later anyhow and move it into more formal framework
+# pragma pylint: disable=import-outside-toplevel,unused-import,undefined-variable
 class CoverageRunner:
     """Run a coverage test for us. Probably move this to the command-line version once
     we set up a formal testing infrastructure"""
+
     def __init__(self, active):
         self.active = active
         self.coverage = None
         if self.active:
-            import coverage
+            pass
 
     def __enter__(self):
         if self.active:
@@ -116,6 +118,8 @@ class CoverageRunner:
             report_dir = os.path.join("test_results", "execution_coverage")
             self.coverage.html_report(directory=report_dir)
 
+
+# pragma pylint: enable=import-outside-toplevel,unused-import,undefined-variable
 
 def process_data():
     """

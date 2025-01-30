@@ -58,7 +58,7 @@ class TafTreeTransformer(lark.Transformer):
         return datetime.datetime(self.issue_date.year + 1, 1, day, hour, minute)
 
     # noinspection GrazieInspection
-    def start(self, branches):
+    def start(self, branches): # pylint: disable=too-many-locals
         """Transform the topmost node of the AST, i.e., the entire TAF"""
         tree = lark_tree_accessor(branches)
 
@@ -154,7 +154,9 @@ class TafTreeTransformer(lark.Transformer):
         return IndexError("Unknown amendment type.")
 
 
-_PARSER = None
+# pragma pylint: disable=invalid-name
+
+
 LARK_DIR = os.path.join("artaf-python", "meteoparse", "lark")
 
 
@@ -168,23 +170,24 @@ def parse_taf(message_time, message):
     :return: ParsedForecast with the TAF's content
     """
     # The parser is expensive to generate, so we memoize it
-    global _PARSER
-    if _PARSER is None:
+    if parse_taf.parser is None:
         with open(os.path.join(LARK_DIR, "taf.lark"), "r", encoding="ascii") as lark_grammar:
-            _PARSER = lark.Lark(lark_grammar, parser="lalr")
+            parse_taf.parser = lark.Lark(lark_grammar, parser="lalr")
 
     try:
-        tree = _PARSER.parse(message)
+        tree = parse_taf.parser.parse(message)
         transformer = TafTreeTransformer(message_time)
         tree = transformer.transform(tree)
         # print(tree)
         return tree
-    except lark.exceptions.UnexpectedInput as e:
+    except lark.exceptions.UnexpectedInput:
         # TODO: Remember that something went wrong
         return None
-    except lark.exceptions.VisitError as e:
+    except lark.exceptions.VisitError:
         # TODO: Remember that something went wrong
         return None
+
+parse_taf.parser = None
 
 
 def parse_tafs(taf_sequence):

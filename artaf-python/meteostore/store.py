@@ -32,7 +32,6 @@ def cleanup_datetime(d):
     return datetime.datetime(d.year, d.month, d.day)
 
 
-# noinspection PyShadowingNames
 def get_iowa_state_nws_archive(pil, start_time, end_time, center=None, fmt="text"):
     """
     Download a NWS weather product from the Iowa Environmental Mesonet archive at Iowa State.
@@ -69,7 +68,6 @@ def get_iowa_state_nws_archive(pil, start_time, end_time, center=None, fmt="text
     return r.content
 
 
-# noinspection PyShadowingNames
 def download_tafs(stations, from_year, to_year, force_refresh=False):
     """
     Download all TAFs not yet loaded into our data cache.
@@ -219,16 +217,17 @@ def get_tafs(stations, from_year, to_year):
     years = list(range(from_year, to_year + 1))
     data_files = {year: zipfile.ZipFile(os.path.join(DATA_PATH, "TAF" + str(year) + ".zip"), "r")
                   for year in years}
-    for station in stations:
-        yield StationTafRecord(station, _get_tafs_station(station, data_files))
+    for a_station in stations:
+        yield StationTafRecord(a_station, _get_tafs_station(a_station, data_files))
 
 
 if __name__ == "__main__":
     selected_stations = util.get_station_list()
     i = 0
-    start_time = datetime.datetime.now()
-    for station, taf_records in get_tafs(selected_stations, 2024, 2024):
+    my_start_time = datetime.datetime.now()
+    for _, taf_records in get_tafs(selected_stations, 2024, 2024):
         for date, content in taf_records:
             i += 1
-    end_time = datetime.datetime.now()
-    print(f"I have {i} TAFs. This took me {((end_time - start_time).total_seconds())} seconds.")
+    my_end_time = datetime.datetime.now()
+    print(
+        f"I have {i} TAFs. This took me {((my_end_time - my_start_time).total_seconds())} seconds.")
