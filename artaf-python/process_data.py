@@ -96,7 +96,7 @@ def placeholder_analysis(raw_tafs):
                     #        .format(ceiling_count, ceiling_sum/ceiling_count),
                     #    end="", flush=True)
     print(f"\rFinished reading {records:,} TAFs with an avg. wind speed of "
-          f"{(wind_speed_sum / records):.1f} knots, gusting {(wind_gust_sum / records):.1f}...    ")
+          f"{(wind_speed_sum / records):.1f} knots, gusting {(wind_gust_sum / records):.1f}.")
 
     wind_histogram_total = sum(wind_histogram.values())
     wind_histogram = {k : wind_histogram[k]/wind_histogram_total for k in sorted(wind_histogram)}
