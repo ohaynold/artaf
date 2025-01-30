@@ -66,6 +66,7 @@ def placeholder_analysis(raw_tafs):
     clouds_count = {"few": 0, "sct": 0, "bkn": 0, "ovc": 0}
     ceiling_sum = 0
     ceiling_count = 0
+    wind_histogram = {}
     for _, date_records in raw_tafs:
         for parsed_taf in meteoparse.parse_tafs(date_records):
             if parsed_taf.from_lines:
@@ -74,6 +75,10 @@ def placeholder_analysis(raw_tafs):
                 wind_gust_sum += parsed_taf.from_lines[0].conditions.wind_gust \
                     if parsed_taf.from_lines[0].conditions.wind_gust is not None \
                     else parsed_taf.from_lines[0].conditions.wind_speed
+                if parsed_taf.from_lines[0].conditions.wind_speed in wind_histogram:
+                    wind_histogram[parsed_taf.from_lines[0].conditions.wind_speed] += 1
+                else:
+                    wind_histogram[parsed_taf.from_lines[0].conditions.wind_speed] = 1
 
                 for cloud_layer in parsed_taf.from_lines[0].conditions.cloud_layers:
                     clouds_count[cloud_layer.CLOUD_LAYER_COVERAGE.lower()] += 1
@@ -92,6 +97,12 @@ def placeholder_analysis(raw_tafs):
                     #    end="", flush=True)
     print(f"\rFinished reading {records:,} TAFs with an avg. wind speed of "
           f"{(wind_speed_sum / records):.1f} knots, gusting {(wind_gust_sum / records):.1f}...    ")
+
+    wind_histogram_total = sum(wind_histogram.values())
+    wind_histogram = {k : wind_histogram[k]/wind_histogram_total for k in sorted(wind_histogram)}
+    print("\n Histogram of wind speeds")
+    for speed, frequency in wind_histogram.items():
+        print(f"{speed:2d} kts: {frequency*100:5.2f}%")
 
 
 # We'll get rid of this later anyhow and move it into more formal framework
