@@ -17,12 +17,18 @@ def safe_open_write(file, mode, *args, new_file_suffix="~"):
     """
     if mode[0] not in ["w", "x"]:
         raise IOError("safe_open_write only works for creating or overwriting a new file")
+    # We pass on encoding arguments, but don't enforce them to keep the signature the same as
+    # open()
     with open(file + new_file_suffix, mode, # pylint: disable=unspecified-encoding
               *args) as handle:
+        failure = 0
         try:
+            # This works due to the @contextmanager decorator for this function
             yield handle
-        except Exception as e:
-            handle.close()
-            os.unlink(file + new_file_suffix)
-            raise e
-    os.rename(file + new_file_suffix, file)
+        except Exception as e: # pylint: disable=broad-exception-caught
+            failure = e
+    if failure is None:
+        os.rename(file + new_file_suffix, file)
+    else:
+        os.unlink(file + new_file_suffix)
+        raise e
