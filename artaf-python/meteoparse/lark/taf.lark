@@ -6,6 +6,12 @@
 # "Compilers: Principles, Techniques, and Tools" by Alfred Aho et al.
 # Rules in Extended Backus-Naur form are written, as Lark expects, in lowercase, and terminals are
 # written in uppercase.
+#
+# For documentation of the grammar of TAFs, see
+# - Advisory Circular 00-45H, section 5.11,
+#      https://www.faa.gov/documentlibrary/media/advisory_circular/ac_00-45h.pdf
+# - Federal Meteorological Handbook No. 1, Surface Weather and Observation Reports, FCM-H1-2019, chapter 12,
+#      https://www.icams-portal.gov/resources/ofcm/fmh/FMH1/fmh1_2019.pdf
 
 start: preamble header (taf_content | TAF_NIL_CONTENT) (AMD_LIMITATION)? CLOSE
 taf_content: from_group_content from_group*
