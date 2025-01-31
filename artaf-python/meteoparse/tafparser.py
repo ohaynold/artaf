@@ -154,7 +154,7 @@ class TafTreeTransformer(lark.Transformer):
         return IndexError("Unknown amendment type.")
 
 
-# pragma pylint: disable=invalid-name
+# pragma pylint: enable=invalid-name
 
 
 LARK_DIR = os.path.join("artaf-python", "meteoparse", "lark")
@@ -206,7 +206,8 @@ def parse_tafs(taf_sequence):
 
 
 if __name__ == "__main__":
-    tafs_parsed = 0
+    # Why does pylint think this is a constant?
+    tafs_parsed = 0 # pylint: disable=invalid-name
     for station, raw_tafs in meteostore.get_tafs(meteostore.get_station_list(), 2010, 2024):
         for taf in parse_tafs(raw_tafs):
             print(taf)

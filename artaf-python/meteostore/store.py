@@ -237,6 +237,8 @@ def get_tafs(stations, from_year, to_year):
     stations = list(stations)
     download_tafs(stations, from_year, to_year)
     years = list(range(from_year, to_year + 1))
+    # ExitStack will provide context management for all the files we're opening, i.e., close them
+    # for us once we're finished or raise and exception
     with contextlib.ExitStack() as stack:
         data_files = {
             year: stack.enter_context(
