@@ -3,6 +3,7 @@ parser generator, in the LALR mode for speed. In addition to the grammar in lark
 TafTreeTransformer does the remaining heave lifting of building Pythonic output objects."""
 
 import collections
+import csv
 import datetime
 import os
 import os.path
@@ -180,12 +181,13 @@ def parse_taf(message_time, message):
         tree = transformer.transform(tree)
         # print(tree)
         return tree
-    except lark.exceptions.UnexpectedInput:
-        # TODO: Remember that something went wrong
-        return None
-    except lark.exceptions.VisitError:
-        # TODO: Remember that something went wrong
-        return None
+    except (lark.exceptions.UnexpectedInput, lark.exceptions.VisitError) as e:
+        e.taf_raw = message
+        e.error_position = e.get_context(message) \
+            if isinstance(e, lark.exceptions.UnexpectedInput) \
+            else None
+        return e
+
 
 parse_taf.parser = None
 
@@ -195,23 +197,38 @@ def parse_tafs(taf_sequence):
     Parse a sequence of raw TAFs and make a sequence of ParsedForecast tuples out of them
     :param taf_sequence: a sequence of datetime.datetime, str tuples with the time and content of
     the raw TAF
-    :return: a sequence of ParsedForecast tuples
+    :return: a sequence of ParsedForecast tuples and/or exceptions for TAFs that failed to parse
     """
     for taf_date, taf_text in taf_sequence:
         res = parse_taf(taf_date, taf_text)
-        # TODO: Register errors
-        if res is not None:
-            # taf_date is no longer needed because now the TAF itself is augmented with full dates
-            yield res
+        # taf_date is no longer needed because now the TAF itself is augmented with full dates
+        yield res
 
 
 if __name__ == "__main__":
     # Why does pylint think this is a constant?
-    tafs_parsed = 0 # pylint: disable=invalid-name
-    for station, raw_tafs in meteostore.get_tafs(meteostore.get_station_list(), 2010, 2024):
-        for taf in parse_tafs(raw_tafs):
-            print(taf)
-            tafs_parsed += 1
-            if tafs_parsed % 1000 == 0:
-                print(f"\r Parsed {tafs_parsed:,} TAFs.", end="", flush=True)
+    tafs_parsed = 0  # pylint: disable=invalid-name
+    tafs_error = 0  # pylint: disable=invalid-name
+    LOG_DIR = os.path.join("data", "logs")
+    os.makedirs(LOG_DIR, exist_ok=True)
+    with open(os.path.join(LOG_DIR, "parse_errors.csv"), "w", encoding="ascii") as error_log_file:
+        error_log = csv.writer(error_log_file)
+        error_log.writerow(["TAF", "Exception", "Hint"])
+        for station, raw_tafs in meteostore.get_tafs(meteostore.get_station_list(), 2010, 2024):
+            for taf in parse_tafs(raw_tafs):
+                if isinstance(taf, ParsedForecast):
+                    # print(taf)
+                    pass
+                else:
+                    error_log.writerow([taf.taf_raw, taf, taf.error_position])
+                    # print("ERROR-----------------------------------------")
+                    # print(taf)
+                    # print("----------------------------------------------")
+                    tafs_error += 1
+                tafs_parsed += 1
+                if tafs_parsed % 1000 == 0:
+                    print(
+                        f"\r Parsed {tafs_parsed:,} TAFs with {tafs_error / tafs_parsed * 100:.4f}%"
+                        f"errors.",
+                        end="", flush=True)
     print("Done.")

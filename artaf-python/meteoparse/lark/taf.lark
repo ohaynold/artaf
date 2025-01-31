@@ -50,12 +50,12 @@ WIND_DIRECTION_VARIABLE: "VRB"
 WIND_SPEED: /\d{2}/
 WIND_DIRECTION_DEGREES: /\d{3}/
 
-visibility_group: visibility_exceeding? visibility_range "SM"
-visibility_exceeding: "P"
-visibility_range: | VISIBILITY_MILES fraction?
-                  | fraction
+visibility_group: VISIBILITY_EXCEEDING? visibility_range "SM"
+VISIBILITY_EXCEEDING: "P"
+visibility_range: | VISIBILITY_MILES VISIBILITY_FRACTION?
+                  | VISIBILITY_FRACTION
 VISIBILITY_MILES: /\d/
-fraction: /\d/ "/" /\d/
+VISIBILITY_FRACTION: /\d/ "/" /\d/
 
 phenomena_group: PHENOMENON_INTENSITY? PHENOMENON+
 PHENOMENON_INTENSITY: "+" | "-"
@@ -65,15 +65,15 @@ PHENOMENON: "VC"
           | "BR" | "FG" | "FU" | "VA" | "DU" | "SA" | "HZ" | "PY"
           | "PO" | "SQ" | "FC" | "SS" | "DS"
 
-clouds: clouds_sky_clear
+clouds: CLOUDS_SKY_CLEAR
       | clouds_vertical_visibility
       | cloud_layer+
-clouds_sky_clear: "SKC"
-clouds_vertical_visibility: "VV" CLOUDS_ALTITUDE cloud_layer_cumulonimbus?
-cloud_layer: CLOUD_LAYER_COVERAGE CLOUDS_ALTITUDE cloud_layer_cumulonimbus?
+CLOUDS_SKY_CLEAR: "SKC"
+clouds_vertical_visibility: "VV" CLOUDS_ALTITUDE
+cloud_layer: CLOUD_LAYER_COVERAGE CLOUDS_ALTITUDE CLOUD_LAYER_CUMULONIMBUS?
 CLOUDS_ALTITUDE: /\d{3}/
 CLOUD_LAYER_COVERAGE:  "SCT" | "FEW" | "BKN" | "OVC"
-cloud_layer_cumulonimbus: "CB"
+CLOUD_LAYER_CUMULONIMBUS: "CB"
 
 DAY_HOUR_MINUTE : /\d{6}/
 DAY_HOUR : /\d{4}/
