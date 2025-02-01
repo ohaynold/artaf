@@ -25,7 +25,8 @@ the morning, the forecast will be 3000 ft, in which case I'll probably stay home
 
 # Setup
 
-To set up the project, clone the repository. You will need the following packages installed:
+To set up the project, clone the repository. You will need Python 3.10 or newer (or PyPy for a speed gain) with the
+following packages installed:
 
 - lark
 - pytz
