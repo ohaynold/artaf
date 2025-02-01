@@ -1,11 +1,30 @@
 # artaf
-Autoregressive Behavior of Aviation Weather Forecasts
+
+## Autoregressive Behavior of Aviation Weather Forecasts
 
 # Team members
+
 - Oliver M. Haynold
 - Neal Ylitalo
 
+# Purpose
+
+Pilots rely on [Terminal Aerodrome Forecasts](https://en.wikipedia.org/wiki/Terminal_aerodrome_forecast) or TAFs
+published typically every six hours for about 700 airports in the United States. Although, of course, using computer
+models, these forecasts still involve a lot of the human factor and are prepared by meteorologists. In the verbal
+discussions accompanying the formal forecasts, the meteorologists sometimes make mention of "not yet" including or
+changing something they foresee since they're not certain enough yet to find doing so worthwhile.
+
+The purpose of this program to see if we can find evidence of the meteorologists being too conservative (or too
+aggressive) in incorporating new information as it becomes available. That is to say, we'd like to see whether there is
+[autoregressive behavior](https://en.wikipedia.org/wiki/Autoregressive_model) in changes of the forecast for the same
+parameter at the same time and place. Put simply, if the meteorologist makes his forecast worse than it was, is that
+reason to believe he'll make it even worse in the next update? (*E.g.*, if in the evening before I want to go flying,
+the forecast for 9 AM the next morning goes from a cloud base of 5000 ft to 4000 ft, is that reason to assume that by
+the morning, the forecast will be 3000 ft, in which case I'll probably stay home?)
+
 # Setup
+
 To set up the project, clone the repository. You will need the following packages installed:
 
 - lark
@@ -14,6 +33,7 @@ To set up the project, clone the repository. You will need the following package
 - yaml (provided by PyYAML, `pip install pyyaml`)
 
 Quick setup and execution instructions, assuming python3 is available (for now, we'll automate):
+
 ```commandline
 python3 -m venv venv
 source venv/bin/activate
@@ -26,8 +46,9 @@ pip install pyyaml
 ```
 
 # How to run
+
 We provide the shell script [runme.sh](runme.sh) that runs the entire analysis (as far as it's developed
-as of now) all in the correct order. It downloads TAFs and then analyzes them (for now just by counting and computing 
+as of now) all in the correct order. It downloads TAFs and then analyzes them (for now just by counting and computing
 average winds).
 
 If you want to run on a very small dataset just to see that it functions, pass the command line arguments
@@ -44,6 +65,10 @@ options:
 ```
 
 ## Configurations provided
-These configurations can be accessed with `--config`
+
+These configurations can be accessed with `--config`:
+
 - *default*, run by default if no configuration is given, is the full dataset from 2010
 - *tiny_data* is a test dataset of two years and ten aerodromes
+
+You can add your own configurations to [config/config.yaml](config/config.yaml).
