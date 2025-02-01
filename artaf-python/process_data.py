@@ -71,6 +71,7 @@ def placeholder_analysis(raw_tafs):
                 continue
             if parsed_taf.from_lines:
                 records += 1
+                # This is clunky, but it's just a temporary placeholder so as to do something
                 wind_speed_sum += parsed_taf.from_lines[0].conditions.wind_speed
                 wind_gust_sum += parsed_taf.from_lines[0].conditions.wind_gust \
                     if parsed_taf.from_lines[0].conditions.wind_gust is not None \

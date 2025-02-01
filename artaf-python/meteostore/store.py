@@ -128,7 +128,7 @@ def _finish_download(year, file_path, tmp_dir_path, tmp_file_path):
     # Now we collect the temporary directory into a ZIP file -- normally we don't compress
     # collections of compressed files, but it turns out that ZIP as delivered from Iowa State is
     # horribly inefficient for many small files. At the same time, I don't want to modify the
-    # original files. Thus, we just compress it again. This may take a little while.
+    # original files. Thus, we just compress them again. This may take a little while.
     print(f"\rPackaging TAFs for {year}...          ", end="", flush=True)
     with zipfile.ZipFile(tmp_file_path, "w", zipfile.ZIP_LZMA) as new_zip_file:
         for filename in sorted(os.listdir(tmp_dir_path)):

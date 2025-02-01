@@ -46,7 +46,11 @@ TafParseError = collections.namedtuple(
 # pragma pylint: disable=invalid-name
 class TafTreeTransformer(lark.Transformer):
     """
-    To be used within Lark to transform abstract syntax trees into ParsedForecast objects.
+    This is the Lark transformer called on Lark's parse results. For an explanation of how it works,
+    see https://lark-parser.readthedocs.io/en/latest/visitors.html
+
+    The method names correspond to the rules and terminals in taf.lark. See for more references
+    there.
     """
 
     # noinspection PyTypeChecker
@@ -78,7 +82,7 @@ class TafTreeTransformer(lark.Transformer):
         amendment = header.HEADER_AMENDMENT.value if hasattr(header, "HEADER_AMENDMENT") else None
 
         # Copy the from lines with the actual forecasts and for simplicity give each one a start
-        # and an end datetime.
+        # and an end datetime so that they don't have to be inferred later on.
         if hasattr(tree, "taf_content"):
             taf_content = tree.taf_content
             from_line_times = [valid_from]
@@ -93,6 +97,7 @@ class TafTreeTransformer(lark.Transformer):
                          valid_until=from_line_times[i + 1])
                 for i in range(len(from_lines))]
         else:
+            # We got a NIL TAF
             new_from_line = None
 
         res = ParsedForecast(aerodrome=aerodrome, issued_at=issued_at, issued_in=issued_in,
@@ -182,9 +187,10 @@ def parse_taf(message_time, message):
 
     try:
         tree = parse_taf.parser.parse(message)
+        # We cannot use the faster option of passing the transformer as an argument to lark.Lark
+        # above since it needs to be instantiated with message_time
         transformer = TafTreeTransformer(message_time)
         tree = transformer.transform(tree)
-        # print(tree)
         return tree
     except (lark.exceptions.UnexpectedInput, lark.exceptions.VisitError) as e:
         hint = e.get_context(message) \
