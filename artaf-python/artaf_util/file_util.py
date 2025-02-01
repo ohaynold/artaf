@@ -21,7 +21,7 @@ def safe_open_write(file, mode, *args, new_file_suffix="~"):
     # open()
     with open(file + new_file_suffix, mode, # pylint: disable=unspecified-encoding
               *args) as handle:
-        failure = 0
+        failure = None
         try:
             # This works due to the @contextmanager decorator for this function
             yield handle
