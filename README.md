@@ -5,12 +5,25 @@ Autoregressive Behavior of Aviation Weather Forecasts
 - Oliver M. Haynold
 - Neal Ylitalo
 
-# Set up
+# Setup
 To set up the project, clone the repository. You will need the following packages installed:
 
+- lark
 - pytz
 - requests
 - yaml (provided by PyYAML, `pip install pyyaml`)
+
+Quick setup and execution instructions, assuming python3 is available (for now, we'll automate):
+```commandline
+python3 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
+pip install lark
+pip install pytz
+pip install requests
+pip install pyyaml
+./runme.sh --config tiny_data
+```
 
 # How to run
 We provide the shell script [runme.sh](runme.sh) that runs the entire analysis (as far as it's developed

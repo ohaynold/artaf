@@ -31,4 +31,4 @@ def safe_open_write(file, mode, *args, new_file_suffix="~"):
         os.rename(file + new_file_suffix, file)
     else:
         os.unlink(file + new_file_suffix)
-        raise e
+        raise failure
