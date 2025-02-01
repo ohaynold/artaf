@@ -69,7 +69,7 @@ def placeholder_analysis(raw_tafs):
     wind_histogram = {}
     for _, date_records in raw_tafs:
         for parsed_taf in meteoparse.parse_tafs(date_records):
-            if isinstance(parsed_taf, Exception):
+            if isinstance(parsed_taf, meteoparse.TafParseError):
                 continue
             if parsed_taf.from_lines:
                 records += 1

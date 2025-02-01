@@ -35,6 +35,11 @@ FromLine = collections.namedtuple(
     ["valid_from", "valid_until", "conditions"]
 )
 
+TafParseError = collections.namedtuple(
+    "TafParseError",
+    ["error", "message_text", "hint"]
+)
+
 
 # The case of the methods is given by the conventions expected by Lark
 # noinspection PyMethodMayBeStatic,PyPep8Naming
@@ -59,7 +64,7 @@ class TafTreeTransformer(lark.Transformer):
         return datetime.datetime(self.issue_date.year + 1, 1, day, hour, minute)
 
     # noinspection GrazieInspection
-    def start(self, branches): # pylint: disable=too-many-locals
+    def start(self, branches):  # pylint: disable=too-many-locals
         """Transform the topmost node of the AST, i.e., the entire TAF"""
         tree = lark_tree_accessor(branches)
 
@@ -182,11 +187,10 @@ def parse_taf(message_time, message):
         # print(tree)
         return tree
     except (lark.exceptions.UnexpectedInput, lark.exceptions.VisitError) as e:
-        e.taf_raw = message
-        e.error_position = e.get_context(message) \
+        hint = e.get_context(message) \
             if isinstance(e, lark.exceptions.UnexpectedInput) \
             else None
-        return e
+        return TafParseError(e, message, hint)
 
 
 parse_taf.parser = None
@@ -219,8 +223,8 @@ if __name__ == "__main__":
                 if isinstance(taf, ParsedForecast):
                     # print(taf)
                     pass
-                else:
-                    error_log.writerow([taf.taf_raw, taf, taf.error_position])
+                elif isinstance(taf, TafParseError):
+                    error_log.writerow([taf.message_text, taf.error, taf.hint])
                     # print("ERROR-----------------------------------------")
                     # print(taf)
                     # print("----------------------------------------------")
