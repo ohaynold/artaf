@@ -25,6 +25,8 @@ def safe_open_write(file, mode, *args, new_file_suffix="~"):
         try:
             # This works due to the @contextmanager decorator for this function
             yield handle
+        # Intentionally catching all exceptions -- we'll clean up and then reraise, so this is in
+        # practice a finally statement, except getting out of the with block first
         except Exception as e: # pylint: disable=broad-exception-caught
             failure = e
     if failure is None:

@@ -67,19 +67,15 @@ class TafTreeTransformer(lark.Transformer):
                                      day, hour, minute)
         return datetime.datetime(self.issue_date.year + 1, 1, day, hour, minute)
 
-    # noinspection GrazieInspection
-    def start(self, branches):  # pylint: disable=too-many-locals
+    def start(self, branches):
         """Transform the topmost node of the AST, i.e., the entire TAF"""
         tree = lark_tree_accessor(branches)
 
-        # Extract header information
-        issued_in = tree.preamble.preamble_issued_in.AERODROME.value
+        # Extract header information we need for parsing -- we'll extract the others
+        # when we construct the output tuple below
         header = tree.header
-        aerodrome = header.header_issued_for.AERODROME.value
-        issued_at = header.header_issued_at.DAY_HOUR_MINUTE.value
         valid_from = header.header_valid_from.DAY_HOUR.value
         valid_until = header.header_valid_until.DAY_HOUR.value
-        amendment = header.HEADER_AMENDMENT.value if hasattr(header, "HEADER_AMENDMENT") else None
 
         # Copy the from lines with the actual forecasts and for simplicity give each one a start
         # and an end datetime so that they don't have to be inferred later on.
@@ -92,17 +88,24 @@ class TafTreeTransformer(lark.Transformer):
                     from_line_times.append(line[0].value)
                     from_lines.append(line[1])
             from_line_times.append(valid_until)
-            new_from_line = [
+            new_from_lines = [
                 FromLine(conditions=from_lines[i], valid_from=from_line_times[i],
                          valid_until=from_line_times[i + 1])
                 for i in range(len(from_lines))]
         else:
             # We got a NIL TAF
-            new_from_line = None
+            new_from_lines = None
 
-        res = ParsedForecast(aerodrome=aerodrome, issued_at=issued_at, issued_in=issued_in,
-                             valid_from=valid_from, valid_until=valid_until, amendment=amendment,
-                             from_lines=new_from_line)
+        res = ParsedForecast(
+            aerodrome=header.header_issued_for.AERODROME.value,
+            issued_at=header.header_issued_at.DAY_HOUR_MINUTE.value,
+            issued_in=tree.preamble.preamble_issued_in.AERODROME.value,
+            valid_from=valid_from,
+            valid_until=valid_until,
+            amendment=header.HEADER_AMENDMENT.value
+                      if hasattr(header, "HEADER_AMENDMENT") else
+                      None,
+            from_lines=new_from_lines)
 
         return res
 
@@ -165,6 +168,7 @@ class TafTreeTransformer(lark.Transformer):
         return IndexError("Unknown amendment type.")
 
 
+# Was disabled above to allow for Lark transformer method names
 # pragma pylint: enable=invalid-name
 
 

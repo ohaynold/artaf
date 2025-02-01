@@ -9,6 +9,7 @@ tree elements as its argument.
 import lark
 
 
+# This is an abstract base class for code reuse
 class AbstractTreeAccessor:  #pylint: disable=too-few-public-methods
     """
     Children of these class are meant to access a lark.Tree in a more convenient and Pythonic
@@ -31,6 +32,25 @@ class AbstractTreeAccessor:  #pylint: disable=too-few-public-methods
             raise AttributeError("Expected to find exactly one selected child node.")
         return candidates[0]
 
+    @staticmethod
+    def select_leaves(branches, selector):
+        """Go through a list of Lark tree branches or leaves and select items named selector
+        :param branches: A list of lark.Tree and/or lark.Token elements
+        :param selector: A string that may match a tree's data or a leave's type field to select
+        :return:
+        """
+        res = []
+        for branch in branches:
+            if isinstance(branch, lark.Tree):
+                if branch.data == selector:
+                    res.append(TreeAccessor(branch))
+            elif isinstance(branch, lark.Token):
+                if branch.type == selector:
+                    res.append(branch)
+            else:
+                raise TypeError("Unexpected type hanging in our Lark tree.")
+        return res
+
 
 class TreeAccessor(AbstractTreeAccessor):
     """
@@ -40,7 +60,12 @@ class TreeAccessor(AbstractTreeAccessor):
     def __init__(self, tree):
         self.tree = tree
 
-    def __getitem__(self, item): # pylint: disable=too-many-branches
+    def __getitem__(self, item):
+        """
+        Select tree's children by integer index, slice, or name
+        :param item: The selector
+        :return: The selected children as a list
+        """
         if isinstance(item, slice):
             res = []
             for a in self.tree.children[item]:
@@ -55,17 +80,7 @@ class TreeAccessor(AbstractTreeAccessor):
                 return TreeAccessor(res)
             return res
         if isinstance(item, str):
-            res = []
-            for child in self.tree.children:
-                if isinstance(child, lark.Tree):
-                    if child.data == item:
-                        res.append(TreeAccessor(child))
-                elif isinstance(child, lark.Token):
-                    if child.type == item:
-                        res.append(child)
-                else:
-                    raise TypeError("Unexpected type hanging in our Lark tree.")
-            return res
+            return self.select_leaves(self.tree.children, item)
         raise IndexError("I don't know how to use this index.")
 
     def __len__(self):
@@ -84,17 +99,7 @@ class BranchesAccessor(AbstractTreeAccessor):
         if isinstance(item, (slice, int)):
             return self.branches[item]
         if isinstance(item, str):
-            res = []
-            for child in self.branches:
-                if isinstance(child, lark.Tree):
-                    if child.data == item:
-                        res.append(TreeAccessor(child))
-                elif isinstance(child, lark.Token):
-                    if child.type == item:
-                        res.append(child)
-                else:
-                    raise TypeError("Unexpected type hanging in our Lark tree.")
-            return res
+            return self.select_leaves(self.branches, item)
         raise IndexError("I don't know how to use this index.")
 
     def __len__(self):
