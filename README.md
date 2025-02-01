@@ -11,7 +11,6 @@ To set up the project, clone the repository. You will need the following package
 - pytz
 - requests
 - yaml (provided by PyYAML, `pip install pyyaml`)
-- coverage (if you want to run a coverage report with `--run-coverage`)
 
 # How to run
 We provide the shell script [runme.sh](runme.sh) that runs the entire analysis (as far as it's developed
@@ -29,7 +28,6 @@ may have to install the required modules by hand. If you're running the full dat
 options:
   -h, --help       show this help message and exit
   --config CONFIG  select a configuration to run in
-  --run_coverage   produce a code coverage report from a linear run, not tests
 ```
 
 ## Configurations provided

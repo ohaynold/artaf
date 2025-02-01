@@ -28,7 +28,8 @@ def get_config(config_name):
     return config
 
 
-RunConfig = collections.namedtuple("RunConfig", ["stations", "year_from", "year_to", "coverage"])
+RunConfig = collections.namedtuple("RunConfig",
+                                   ["stations", "year_from", "year_to"])
 
 
 def process_arguments():
@@ -37,10 +38,8 @@ def process_arguments():
     :return: List of aerodromes, year to start with, year to end with
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", help="select a configuration to run in", default="default")
-    parser.add_argument("--run_coverage",
-                        help="produce a code coverage report from a linear run, not tests",
-                        action="store_true")
+    parser.add_argument("--config", help="select a configuration to run in",
+                        default="default")
     arguments = parser.parse_args()
     config_name = arguments.config
     config = get_config(config_name)
@@ -51,8 +50,7 @@ def process_arguments():
         stations = list(filter(lambda station: station.station in config["aerodromes"], stations))
     print(f"Running in configuration {arguments.config} for years from {year_from} through "
           f"{year_to} with {len(stations)} aerodromes.")
-    return RunConfig(stations=stations, year_from=year_from, year_to=year_to,
-                     coverage=arguments.run_coverage)
+    return RunConfig(stations=stations, year_from=year_from, year_to=year_to)
 
 
 def placeholder_analysis(raw_tafs):
@@ -101,38 +99,11 @@ def placeholder_analysis(raw_tafs):
           f"{(wind_speed_sum / records):.1f} knots, gusting {(wind_gust_sum / records):.1f}.")
 
     wind_histogram_total = sum(wind_histogram.values())
-    wind_histogram = {k : wind_histogram[k]/wind_histogram_total for k in sorted(wind_histogram)}
+    wind_histogram = {k: wind_histogram[k] / wind_histogram_total for k in sorted(wind_histogram)}
     print("\n Histogram of wind speeds")
     for speed, frequency in wind_histogram.items():
-        print(f"{speed:2d} kts: {frequency*100:5.2f}%")
+        print(f"{speed:2d} kts: {frequency * 100:5.2f}%")
 
-
-# We'll get rid of this later anyhow and move it into more formal framework
-# pragma pylint: disable=import-outside-toplevel,unused-import,undefined-variable
-class CoverageRunner:
-    """Run a coverage test for us. Probably move this to the command-line version once
-    we set up a formal testing infrastructure"""
-
-    def __init__(self, active):
-        self.active = active
-        self.coverage = None
-        if self.active:
-            pass
-
-    def __enter__(self):
-        if self.active:
-            self.coverage = coverage.Coverage()
-            self.coverage.start()
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.active:
-            self.coverage.stop()
-            self.coverage.save()
-            report_dir = os.path.join("test_results", "execution_coverage")
-            self.coverage.html_report(directory=report_dir)
-
-
-# pragma pylint: enable=import-outside-toplevel,unused-import,undefined-variable
 
 def process_data():
     """
@@ -141,16 +112,15 @@ def process_data():
 
     run_config = process_arguments()
 
-    with CoverageRunner(active=run_config.coverage):
-        print("Getting TAFs...")
-        raw_tafs = meteostore.get_tafs(run_config.stations, run_config.year_from,
-                                       run_config.year_to)
+    print("Getting TAFs...")
+    raw_tafs = meteostore.get_tafs(run_config.stations, run_config.year_from,
+                                   run_config.year_to)
 
-        # Just a placeholder to do something with our TAFs
-        print("Evaluating TAFs (a placeholder for now)...")
-        placeholder_analysis(raw_tafs)
+    # Just a placeholder to do something with our TAFs
+    print("Evaluating TAFs (a placeholder for now)...")
+    placeholder_analysis(raw_tafs)
 
-        print("Success!")
+    print("Success!")
 
 
 if __name__ == "__main__":
