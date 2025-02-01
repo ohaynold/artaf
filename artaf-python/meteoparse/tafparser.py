@@ -12,7 +12,7 @@ from enum import Enum
 import lark
 
 import meteostore
-from meteoparse.tree_accessor import lark_tree_accessor
+from meteoparse.tree_accessor import TreeAccessor
 
 
 class AmendmentType(Enum):
@@ -69,7 +69,7 @@ class TafTreeTransformer(lark.Transformer):
 
     def start(self, branches):
         """Transform the topmost node of the AST, i.e., the entire TAF"""
-        tree = lark_tree_accessor(branches)
+        tree = TreeAccessor(branches)
 
         # Extract header information we need for parsing -- we'll extract the others
         # when we construct the output tuple below
@@ -116,7 +116,7 @@ class TafTreeTransformer(lark.Transformer):
         :param branches: A list of lark.Tree or lark.Token objects
         :return: WeatherCondition tuple
         """
-        from_conditions = lark_tree_accessor(branches).from_conditions
+        from_conditions = TreeAccessor(branches).from_conditions
         wind_group = from_conditions.wind_group
         wind_speed = wind_group.WIND_SPEED.value
         wind_gust = wind_group.wind_gust_group.WIND_SPEED.value \
