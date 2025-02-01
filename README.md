@@ -10,12 +10,12 @@
 # Purpose
 
 Pilots rely on [Terminal Aerodrome Forecasts](https://en.wikipedia.org/wiki/Terminal_aerodrome_forecast) or TAFs
-published typically every six hours for about 700 airports in the United States. Although, of course, using computer
-models, these forecasts still involve a lot of the human factor and are prepared by meteorologists. In the verbal
+published typically every six hours for about 700 airports in the United States. AAlthough these forecasts rely on
+computer models, they still involve significant human judgment and are prepared by meteorologists. In the verbal
 discussions accompanying the formal forecasts, the meteorologists sometimes make mention of "not yet" including or
 changing something they foresee since they're not certain enough yet to find doing so worthwhile.
 
-The purpose of this program to see if we can find evidence of the meteorologists being too conservative (or too
+The purpose of this program is to see if we can find evidence of the meteorologists being too conservative (or too
 aggressive) in incorporating new information as it becomes available. That is to say, we'd like to see whether there is
 [autoregressive behavior](https://en.wikipedia.org/wiki/Autoregressive_model) in changes of the forecast for the same
 parameter at the same time and place. Put simply, if the meteorologist makes his forecast worse than it was, is that
@@ -55,7 +55,8 @@ average winds).
 If you want to run on a very small dataset just to see that it functions, pass the command line arguments
 ``--config tiny_data``. Note that we don't provide automated dependency management yet, so you
 may have to install the required modules by hand. If you're running the full dataset, we will download about
-20 million TAFs, so give it a little time and disk space.
+20 million TAFs, so give it a little time and disk space. The full dataset will likely take about three hours to
+download and 800 MB of storage.
 
 ## Options
 
