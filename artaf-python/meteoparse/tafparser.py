@@ -173,7 +173,7 @@ def parse_taf(message_time, message):
     :param message_time: Datetime of the TAF in UTC. Knowledge of the current date is presumed in
     TAFs' abbreviated notation.
     :param message: Raw test of the TAF
-    :return: ParsedForecast with the TAF's content
+    :return: ParsedForecast with the TAF's content, or TafParseError with what went wong
     """
     # The parser is expensive to generate, so we memoize it
     if parse_taf.parser is None:
@@ -201,7 +201,7 @@ def parse_tafs(taf_sequence):
     Parse a sequence of raw TAFs and make a sequence of ParsedForecast tuples out of them
     :param taf_sequence: a sequence of datetime.datetime, str tuples with the time and content of
     the raw TAF
-    :return: a sequence of ParsedForecast tuples and/or exceptions for TAFs that failed to parse
+    :return: a sequence of ParsedForecast tuples and/or TafParseError for TAFs that failed to parse
     """
     for taf_date, taf_text in taf_sequence:
         res = parse_taf(taf_date, taf_text)
