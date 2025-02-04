@@ -3,15 +3,16 @@ be executed with the project directory as the working directory."""
 import argparse
 import collections
 import csv
+import os
 import os.path
 import zipfile
 
 import yaml
 
+import analyzer.analyzer
 import artaf_util
 import meteoparse
 import meteostore
-import analyzer.analyzer
 
 CONFIG_PATH = os.path.join("config", "config.yaml")
 
@@ -72,6 +73,7 @@ def process_data():
     print("Parsing and regularizing TAFs...")
 
     output_dir = "data"
+    os.makedirs(output_dir, exist_ok=True)
     lines_written = 0
     errors = 0
     output_path = os.path.join(output_dir, f"TAF Lines {run_config.config_name}.csv.zip")
