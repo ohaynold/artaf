@@ -23,11 +23,17 @@ reason to believe he'll make it even worse in the next update? (*E.g.*, if in th
 the forecast for 9 AM the next morning goes from a cloud base of 5000 ft to 4000 ft, is that reason to assume that by
 the morning, the forecast will be 3000 ft, in which case I'll probably stay home?)
 
+# Results
+
+For now as a mere promise of the future (since the R code isn't quite ready for checkin yet), here is a [summary report
+of the data](output/Statistics.html).
+
 # Setup
 
 To set up the project, clone the repository. You will need Python 3.10 or newer (or PyPy for a speed gain).
 
-On Debian or Debian-based GNU/Linux distributions, you may need to first install the python3-venv package via your package manager.
+On Debian or Debian-based GNU/Linux distributions, you may need to first install the python3-venv package via your 
+package manager.
 
 Automated setup instructions, assuming python3 and bash are available:
 
