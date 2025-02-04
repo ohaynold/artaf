@@ -1,4 +1,4 @@
-#!/usr/bin/env -S bash
+#!/usr/bin/env -S sh
 
 LOG_FILE="install.log"
 REQS_FILE="artaf-python/requirements.txt"
@@ -26,7 +26,7 @@ notifyerror(){
 }
 
 echo "Installing pip..."
-python3 -m pip install --upgrade pip &>> $LOG_FILE
+python3 -m pip install --upgrade pip >>$LOG_FILE 2>&1
 
 # Make sure that the first pip in $PATH is in our new virtual environment
 [[ `which pip` == "$VIRTUAL_ENV"* ]] || notifyerror "pip"
