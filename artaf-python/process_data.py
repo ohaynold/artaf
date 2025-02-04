@@ -102,7 +102,7 @@ def process_data():
                     error_writer.writerow([line.message_text, line.error, line.hint])
                     errors += 1
                 else:
-                    raise TypeError("Unexpected parser output")
+                    raise TypeError(f"Unexpected parser output of type {type(line)}")
     print(f"\rWrote {lines_written:,} hourly TAF lines, {errors} errors.                          ")
     print(f"Output written to {output_path}.")
 

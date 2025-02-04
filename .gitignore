@@ -176,3 +176,5 @@ cython_debug/
 data/raw
 data/logs
 data/TAF*
+.Rproj.user
+*.Rproj

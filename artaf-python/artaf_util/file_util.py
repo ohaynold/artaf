@@ -46,8 +46,8 @@ def open_compressed_text_zip_write(compressed_path, inner_file_name):
     :param inner_file_name: Name of the inner file within the ZIP file
     """
     with (
-        zipfile.ZipFile(compressed_path, "w", zipfile.ZIP_LZMA) as out_zip_file,
+        zipfile.ZipFile(compressed_path, "w", zipfile.ZIP_DEFLATED) as out_zip_file,
         out_zip_file.open(inner_file_name, "w") as out_bin_file,
-        io.TextIOWrapper(out_bin_file, encoding="ascii", newline="\n") as out_file
+        io.TextIOWrapper(out_bin_file, encoding="utf-8", newline="\n") as out_file
     ):
         yield out_file
