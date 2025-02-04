@@ -26,7 +26,7 @@ the morning, the forecast will be 3000 ft, in which case I'll probably stay home
 # Results
 
 For now as a mere promise of the future (since the R code isn't quite ready for checkin yet), here is a [summary report
-of the data](output/Statistics.html).
+of the data](output/Statistics.md).
 
 # Setup
 
