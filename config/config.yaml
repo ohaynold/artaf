@@ -3,7 +3,7 @@ general:
   year_to: 2024
 
 # Process our full dataset
-default:
+full_set:
   year_from: 2010
 
 # Run on a very limited test dataset to save time

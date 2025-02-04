@@ -175,3 +175,4 @@ cython_debug/
 .idea
 data/raw
 data/logs
+data/TAF*
