@@ -2,16 +2,9 @@
 lines, each representing one forecast for one hour"""
 
 import datetime
-from collections import namedtuple
 
-import meteostore
 import meteoparse.tafparser
-
-HourlyTafLine = namedtuple(
-    "HourlyTafLine",
-   ["aerodrome", "issued_at", "issued_in",  "amendment",
-               "hour_starting", "wind_speed", "wind_gust"]
-   )
+import meteostore
 
 ONE_HOUR = datetime.timedelta(seconds=3600)
 
@@ -22,19 +15,22 @@ def regularize_taf(taf):
     :return: A list of HourlyTafLine or an error passed through
     """
     if taf.from_lines is None:
-        return []
-    res = []
+        return taf
+    res = taf._replace(from_lines=[])
     for f in taf.from_lines:
         hour_starting = f.valid_from
+        if hour_starting != datetime.datetime(
+                hour_starting.year, hour_starting.month, hour_starting.day, hour_starting.hour):
+            return meteoparse.tafparser.TafParseError(error="Misaligned validity",
+                                                      message_text=taf,
+                                                      hint=None)
         while hour_starting < f.valid_until:
-            if hour_starting in [x.hour_starting for x in res]:
-                return [meteoparse.tafparser.TafParseError(error="Overlapping hours",
+            if res.from_lines and hour_starting != res.from_lines[-1].valid_until:
+                return meteoparse.tafparser.TafParseError(error="Non-contiguous hours",
                                                            message_text=taf,
-                                                           hint=None)]
-            res.append(HourlyTafLine(
-                taf.aerodrome, taf.issued_at, taf.issued_in, taf.amendment,
-                hour_starting, f.conditions.wind_speed, f.conditions.wind_gust
-            ))
+                                                           hint=None)
+            res.from_lines.append(f._replace(valid_from=hour_starting,
+                                             valid_until=hour_starting+ONE_HOUR))
             hour_starting += ONE_HOUR
     return res
 
@@ -46,7 +42,7 @@ def regularize_tafs(tafs):
     """
     for taf in tafs:
         if isinstance(taf, meteoparse.tafparser.ParsedForecast):
-            yield from regularize_taf(taf)
+            yield regularize_taf(taf)
         else:
             # Pass on errors unmodified
             yield taf
@@ -56,6 +52,6 @@ if __name__ == "__main__":
         raw_tafs = meteoparse.tafparser.parse_tafs(raw_tafs)
         expanded = regularize_tafs(raw_tafs)
         for line in expanded:
-            if isinstance(line, HourlyTafLine):
+            if isinstance(line, meteoparse.tafparser.ParsedForecast):
                 print(line)
     print("Done.")

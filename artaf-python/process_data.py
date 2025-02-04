@@ -11,6 +11,7 @@ import yaml
 import artaf_util
 import meteoparse
 import meteostore
+import analyzer.analyzer
 
 CONFIG_PATH = os.path.join("config", "config.yaml")
 
@@ -88,23 +89,27 @@ def process_data():
         error_writer.writerow(["raw_message", "error", "info"])
 
         for station, taf_messages in raw_tafs:
-            hourly_lines = meteoparse.regularize_tafs( meteoparse.parse_tafs(taf_messages))
-            for line in hourly_lines:
-                if isinstance(line, meteoparse.HourlyTafLine):
-                    writer.writerow([line.aerodrome, line.issued_at.strftime("%Y-%m-%dT%H:%M"),
-                                  line.amendment.name if line.amendment is not None else None,
-                                  line.hour_starting.strftime("%Y-%m-%dT%H:%M"),
-                                  line.wind_speed, line.wind_gust])
-                    lines_written += 1
+            cooked_tafs = meteoparse.regularize_tafs( meteoparse.parse_tafs(taf_messages))
+            cooked_tafs = analyzer.analyzer.arrange_by_hour_forecast(cooked_tafs)
+            for taf in cooked_tafs:
+                if isinstance(taf, analyzer.analyzer.HourlyGroup):
+                    for line in taf.items:
+                        writer.writerow([station.station, line.issued_at.strftime(
+                            "%Y-%m-%dT%H:%M"),
+                                      line.amendment.name if line.amendment is not None else None,
+                                      taf.hour_starting.strftime("%Y-%m-%dT%H:%M"),
+                                      line.conditions.wind_speed,
+                                      line.conditions.wind_gust])
+                        lines_written += 1
                     if lines_written % 10_000 == 0:
                         print(f"\rProcessing {station.station}, wrote {lines_written:,} hourly TAF "
                               f"lines, {errors} errors...",
                               flush=True, end="")
-                elif isinstance(line, meteoparse.TafParseError):
-                    error_writer.writerow([line.message_text, line.error, line.hint])
+                elif isinstance(taf, meteoparse.TafParseError):
+                    error_writer.writerow([taf.message_text, taf.error, taf.hint])
                     errors += 1
                 else:
-                    raise TypeError(f"Unexpected parser output of type {type(line)}")
+                    raise TypeError(f"Unexpected parser output of type {type(taf)}")
     print(f"\rWrote {lines_written:,} hourly TAF lines, {errors} errors.                          ")
     print(f"Output written to {output_path}.")
 
