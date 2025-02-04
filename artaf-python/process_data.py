@@ -4,6 +4,7 @@ import argparse
 import collections
 import csv
 import os.path
+import zipfile
 
 import yaml
 
@@ -75,8 +76,10 @@ def process_data():
     output_path = os.path.join(output_dir, f"TAF Lines {run_config.config_name}.csv.zip")
     error_path = os.path.join(output_dir, f"TAF Errors {run_config.config_name}.csv.zip")
     with (
-        artaf_util.open_compressed_text_zip_write(output_path, "TAF Lines.csv") as out_file,
-        artaf_util.open_compressed_text_zip_write(error_path, "TAF Errors.csv") as err_file
+        artaf_util.open_compressed_text_zip_write(
+            output_path, "TAF Lines.csv", "ascii", zipfile.ZIP_BZIP2) as out_file,
+        artaf_util.open_compressed_text_zip_write(
+            error_path, "TAF Errors.csv", "ascii", zipfile.ZIP_BZIP2) as err_file
     ):
         writer = csv.writer(out_file)
         writer.writerow(["aerodrome", "issue_time", "issue_place", "amendment",

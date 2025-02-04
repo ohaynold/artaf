@@ -39,15 +39,18 @@ def safe_open_write(file, mode, *args, new_file_suffix="~"):
 
 
 @contextmanager
-def open_compressed_text_zip_write(compressed_path, inner_file_name):
+def open_compressed_text_zip_write(compressed_path, inner_file_name, encoding, compression):
     """
     Open a compressed ZIP file containing exactly one text file for writing
     :param compressed_path: Path of the compressed ZIP file to be created
     :param inner_file_name: Name of the inner file within the ZIP file
+    :param encoding: The encoding of the text to be written
+    :param compression: One of the compression constants of the zipfile module, e.g.,
+    zipfile.ZIP_DEFLATED
     """
     with (
-        zipfile.ZipFile(compressed_path, "w", zipfile.ZIP_DEFLATED) as out_zip_file,
-        out_zip_file.open(inner_file_name, "w") as out_bin_file,
-        io.TextIOWrapper(out_bin_file, encoding="utf-8", newline="\n") as out_file
+        zipfile.ZipFile(compressed_path, "w", compression) as out_zip_file,
+        out_zip_file.open(inner_file_name, "w", force_zip64=True) as out_bin_file,
+        io.TextIOWrapper(out_bin_file, encoding=encoding, newline="\n") as out_file
     ):
         yield out_file
