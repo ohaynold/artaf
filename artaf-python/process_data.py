@@ -82,7 +82,7 @@ def process_data():
             error_path, "TAF Errors.csv", "ascii", zipfile.ZIP_BZIP2) as err_file
     ):
         writer = csv.writer(out_file)
-        writer.writerow(["aerodrome", "issue_time", "issue_place", "amendment",
+        writer.writerow(["aerodrome", "issue_time", "amendment",
                          "hour_starting", "wind_speed", "wind_gust"])
         error_writer = csv.writer(err_file)
         error_writer.writerow(["raw_message", "error", "info"])
@@ -92,7 +92,6 @@ def process_data():
             for line in hourly_lines:
                 if isinstance(line, meteoparse.HourlyTafLine):
                     writer.writerow([line.aerodrome, line.issued_at.strftime("%Y-%m-%dT%H:%M"),
-                                  line.issued_in,
                                   line.amendment.name if line.amendment is not None else None,
                                   line.hour_starting.strftime("%Y-%m-%dT%H:%M"),
                                   line.wind_speed, line.wind_gust])
