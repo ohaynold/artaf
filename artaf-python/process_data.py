@@ -3,12 +3,11 @@ be executed with the project directory as the working directory."""
 import argparse
 import collections
 import csv
-import io
 import os.path
-import zipfile
 
 import yaml
 
+import artaf_util
 import meteoparse
 import meteostore
 
@@ -76,29 +75,24 @@ def process_data():
     output_path = os.path.join(output_dir, f"TAF Lines {run_config.config_name}.csv.zip")
     error_path = os.path.join(output_dir, f"TAF Errors {run_config.config_name}.csv.zip")
     with (
-        zipfile.ZipFile(output_path, "w", zipfile.ZIP_LZMA) as out_zip_file,
-        out_zip_file.open("TAF Lines.csv", "w") as out_bin_file,
-        io.TextIOWrapper(out_bin_file, encoding="ascii", newline="\n") as out_file,
-        zipfile.ZipFile(error_path, "w", zipfile.ZIP_LZMA) as err_zip_file,
-        err_zip_file.open("TAF Errors.csv", "w") as out_err_file,
-        io.TextIOWrapper(out_err_file, encoding="ascii", newline="\n") as err_file
+        artaf_util.open_compressed_text_zip_write(output_path, "TAF Lines.csv") as out_file,
+        artaf_util.open_compressed_text_zip_write(error_path, "TAF Errors.csv") as err_file
     ):
         writer = csv.writer(out_file)
-        writer.writerow(["aerodrome","issue_time","issue_place","amendment",
-                         "hour_starting", "wind_speed","wind_gust"])
+        writer.writerow(["aerodrome", "issue_time", "issue_place", "amendment",
+                         "hour_starting", "wind_speed", "wind_gust"])
         error_writer = csv.writer(err_file)
         error_writer.writerow(["raw_message", "error", "info"])
+
         for station, taf_messages in raw_tafs:
-            parsed_tafs = meteoparse.parse_tafs(taf_messages)
-            hourly_lines = meteoparse.regularize_tafs(parsed_tafs)
+            hourly_lines = meteoparse.regularize_tafs( meteoparse.parse_tafs(taf_messages))
             for line in hourly_lines:
                 if isinstance(line, meteoparse.HourlyTafLine):
-                    clean_line = [line.aerodrome, line.issued_at.strftime("%Y-%m-%dT%H:%M"),
+                    writer.writerow([line.aerodrome, line.issued_at.strftime("%Y-%m-%dT%H:%M"),
                                   line.issued_in,
                                   line.amendment.name if line.amendment is not None else None,
                                   line.hour_starting.strftime("%Y-%m-%dT%H:%M"),
-                                  line.wind_speed, line.wind_gust]
-                    writer.writerow(clean_line)
+                                  line.wind_speed, line.wind_gust])
                     lines_written += 1
                     if lines_written % 10_000 == 0:
                         print(f"\rProcessing {station.station}, wrote {lines_written:,} hourly TAF "
