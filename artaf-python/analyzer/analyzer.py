@@ -1,6 +1,6 @@
 """This provide summary statistics of the TAFs, i.e., the core of our analysis once we've got
 all the data"""
-
+import csv
 import datetime
 from collections import namedtuple
 
@@ -58,7 +58,7 @@ HourlyHistogramJob = namedtuple("HourlyHistogramJob",
                                 ["name", "ascending_group_by", "other_group_by", "values"])
 
 
-class HourlyHistogramKeeper: # pylint: disable=too-many-instance-attributes
+class HourlyHistogramKeeper:  # pylint: disable=too-many-instance-attributes
     """A keeper of histograms of hourly data. Its function its defined by its HourlyHistogramJob.
     Within the job we have the parameters:
     name: A name for the job
@@ -126,16 +126,23 @@ class HourlyHistogramKeeper: # pylint: disable=too-many-instance-attributes
 
 if __name__ == "__main__":
     lines_written = [0]
+    out_csv = []
 
-    def inc_counts(_, counts):
+
+    def inc_counts(asc_group, counts):
         """Increment line count"""
         lines_written[0] += len(counts)
+        for (other_group, field_name, prev, curr, final), ncount in counts.items():
+            new_row = list(asc_group) + list(other_group) + \
+                                  [field_name, prev, curr, final, ncount]
+            out_csv[0].writerow(new_row)
+
 
     keeper = HourlyHistogramKeeper(
         HourlyHistogramJob(name="MonthlyStations",
                            ascending_group_by={
                                "aerodrome": lambda x: x.aerodrome,
-                               "year_month": lambda x: x.hour_starting.strftime("%Y-%m")
+                               "year": lambda x: x.hour_starting.strftime("%Y")
                            },
                            other_group_by={},
                            values={
@@ -144,18 +151,26 @@ if __name__ == "__main__":
                            ),
         inc_counts)
 
-    for station, raw_tafs in meteostore.get_tafs(meteostore.get_station_list()[:10], 2023, 2024):
-        raw_tafs = meteoparse.parse_tafs(raw_tafs)
-        expanded = meteoparse.regularize_tafs(raw_tafs)
-        arranged = arrange_by_hour_forecast(expanded, station.station)
+    with open("output/tmp histogram.csv", "w", encoding="ascii") as out_file:
+        out_csv.append(csv.writer(out_file))
+        group_field_names_asc, group_field_names_other = keeper.get_field_names()
+        out_csv[0].writerow(group_field_names_asc + group_field_names_other +
+                         ["variable", "previous", "current", "final", "count"])
+
         i = 0
-        for line in arranged:
-            if isinstance(line, HourlyGroup):
-                keeper.process_hourly_group(line)
-                i += 1
-                if i % 10_000 == 0:
-                    print(f"\rProcessed {i} unique hours, wrote {lines_written[0]} histogram "
-                          f"lines..", end="", flush=True)
+        for station, raw_tafs in meteostore.get_tafs(meteostore.get_station_list()[:30], 2023,
+                                                     2024):
+            raw_tafs = meteoparse.parse_tafs(raw_tafs)
+            expanded = meteoparse.regularize_tafs(raw_tafs)
+            arranged = arrange_by_hour_forecast(expanded, station.station)
+            for line in arranged:
+                if isinstance(line, HourlyGroup):
+                    keeper.process_hourly_group(line)
+                    i += 1
+                    if i % 10_000 == 0:
+                        print(
+                            f"\rProcessed {i:,} unique hours, wrote {lines_written[0]:,} histogram "
+                            f"lines..", end="", flush=True)
     print(f"\rProcessed {i} unique hours, wrote {lines_written[0]} histogram "
           f"lines..")
     print("Done.")
