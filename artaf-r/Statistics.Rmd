@@ -1,0 +1,91 @@
+---
+title: "Autoregressive Behavior of Aviation Weather Forecasts: Statistics"
+author: "Oliver M. Haynold & Neal Ylitalo"
+date: "`r Sys.Date()`"
+#output: html_document
+output:
+  md_document:
+    variant: markdown_github
+---
+
+```{r setup, include=FALSE}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(usmap)
+library(palettes)
+
+
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r}
+lines <- read_csv("../data/TAF Lines tiny_data.csv.zip",
+                col_types = cols(
+                aerodrome = "f",
+                issue_time = "T",
+                amendment = "f",
+                hour_starting = "T",
+                wind_speed = "n",
+                wind_gust = "n"
+              ))
+
+stations <- read_csv("../config/stations.csv", 
+                     col_types = cols(
+                       station = "f",
+                       name = "c",
+                       latitude = "n",
+                       longitude = "n",
+                       center = "f"
+                     )) %>%
+              rename(aerodrome=station) %>%
+              select(-center)
+```
+
+
+For now, this is just same sample analysis as a framework.
+
+# Some Summary Statistics
+
+We have loaded `r nrow(lines)` data lines for `r length(unique(lines$aerodrome))` aerodromes for configuration tiny_data.
+
+## Distribution of Wind Speeds
+
+```{r}
+ print(
+   ggplot(lines, aes(x=wind_speed)) + 
+     geom_histogram(binwidth = 1) +
+     labs(title="Histogram of Wind Speeds", x="Wind Speed kts", y="Count") +
+     theme_bw()
+   )
+```
+
+
+```{r}
+ print(
+   ggplot(lines %>% filter(!is.na(wind_gust)), aes(x=wind_gust)) + 
+     geom_histogram(binwidth = 1) +
+     labs(title="Histogram of Wind Gusts", subtitle="(not including no gust)", x="Wind Gust kts", y="Count") +
+     theme_bw()
+   )
+```
+
+```{r}
+plotdat <- lines %>%
+  group_by(aerodrome) %>%
+  summarise(avg_wind = mean(wind_speed)) %>%
+  left_join(stations, by=c("aerodrome"))
+
+
+plot_usmap(fill="grey") +
+  geom_sf(data=usmap_transform(plotdat, input_names = c("longitude", "latitude")),
+             aes(colour=avg_wind)) +
+  scale_colour_gradientn(colours = heat.colors(10)) +
+  labs(title = "Average wind forecast speed by location", colour="Knots")
+```
+
+
+
+
+
+

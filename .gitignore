@@ -231,3 +231,4 @@ data/raw
 data/logs
 data/TAF*
 *.Rproj
+test.R
