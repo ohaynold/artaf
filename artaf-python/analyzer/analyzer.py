@@ -18,7 +18,8 @@ def arrange_by_hour_forecast(tafs, aerodrome):
     Rearrange a stream of TAFs, in ascending order and for the same station, so as to have all the
     forecasts for a given hour together, in the order they were issues.
     :param tafs: A sequence of TAFs and/or errors
-    :param tafs: The aerodrome, as a four-letter identifier, for which the tafs are supposed to be
+    :param aerodrome: The aerodrome, as a four-letter identifier, for which the tafs are supposed to
+    be
     """
     hourly_cache = {}
     for taf in tafs:
