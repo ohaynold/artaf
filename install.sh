@@ -34,4 +34,8 @@ python3 -m pip install --upgrade pip >>$LOG_FILE 2>&1
 echo "Installing required packages:" && awk -F "==" '{print "    "$1}' $REQS_FILE
 [[ `pip install -r $REQS_FILE --log $LOG_FILE` ]] || notifyerror "a requirement"
 
+echo "Installing R environment..."
+R renv/restore.R >>$LOG_FILE 2>&1
+
+
 echo "Done! To run the program, run runme.sh"

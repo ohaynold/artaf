@@ -30,12 +30,13 @@ of the data](output/Statistics.md).
 
 # Setup
 
-To set up the project, clone the repository. You will need Python 3.10 or newer (or PyPy for a speed gain).
+To set up the project, clone the repository. You will need [Python 3.10 or newer](https://www.python.org/downloads/) 
+(or PyPy for a speed gain) and [R 4.4 or newer](https://cran.r-project.org/).
 
 On Debian or Debian-based GNU/Linux distributions, you may need to first install the python3-venv package via your 
 package manager.
 
-Automated setup instructions, assuming python3 and bash are available:
+Automated setup instructions, assuming Python 3, R, and bash are available:
 
 ```commandline
 ./install.sh
