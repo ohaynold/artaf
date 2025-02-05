@@ -124,6 +124,12 @@ class HourlyHistogramKeeper: # pylint: disable=too-many-instance-attributes
 
 
 if __name__ == "__main__":
+    lines_written = [0]
+
+    def inc_counts(_, counts):
+        """Increment line count"""
+        lines_written[0] += len(counts)
+
     keeper = HourlyHistogramKeeper(
         HourlyHistogramJob(name="MonthlyStations",
                            ascending_group_by={
@@ -135,7 +141,7 @@ if __name__ == "__main__":
                                "wind_speed": lambda x: x.conditions.wind_speed
                            }
                            ),
-        print)
+        inc_counts)
 
     for station, raw_tafs in meteostore.get_tafs(meteostore.get_station_list()[:10], 2023, 2024):
         raw_tafs = meteoparse.parse_tafs(raw_tafs)
@@ -147,5 +153,8 @@ if __name__ == "__main__":
                 keeper.process_hourly_group(line)
                 i += 1
                 if i % 10_000 == 0:
-                    print(f"\rProcessed {i} lines...", end="", flush=True)
+                    print(f"\rProcessed {i} unique hours, wrote {lines_written[0]} histogram "
+                          f"lines..", end="", flush=True)
+    print(f"\rProcessed {i} unique hours, wrote {lines_written[0]} histogram "
+          f"lines..")
     print("Done.")
