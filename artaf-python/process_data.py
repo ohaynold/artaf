@@ -92,7 +92,7 @@ def process_data():
 
         for station, taf_messages in raw_tafs:
             cooked_tafs = meteoparse.regularize_tafs( meteoparse.parse_tafs(taf_messages))
-            cooked_tafs = analyzer.analyzer.arrange_by_hour_forecast(cooked_tafs)
+            cooked_tafs = analyzer.analyzer.arrange_by_hour_forecast(cooked_tafs, station.station)
             for taf in cooked_tafs:
                 if isinstance(taf, analyzer.analyzer.HourlyGroup):
                     for line in taf.items:
