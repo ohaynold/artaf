@@ -32,8 +32,12 @@ def arrange_by_hour_forecast(tafs):
                                                                      taf.amendment,
                                                                      from_line.conditions))
 
-            first_hour_available = min(hourly_cache.keys())
-            if len(hourly_cache) > 0 and first_hour_available < taf.issued_at - ONE_HOUR:
+            while True:
+                if len(hourly_cache) == 0:
+                    break
+                first_hour_available = min(hourly_cache.keys())
+                if not (len(hourly_cache) > 0 and first_hour_available < taf.issued_at - ONE_HOUR):
+                    break
                 yield HourlyGroup(first_hour_available, hourly_cache[first_hour_available])
                 del hourly_cache[first_hour_available]
         elif isinstance(taf, meteoparse.TafParseError):
