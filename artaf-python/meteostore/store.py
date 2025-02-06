@@ -6,11 +6,11 @@ import os.path
 import re
 import zipfile
 from collections import namedtuple
-from artaf_util import safe_open_write
 
 import pytz
 import requests
 
+from artaf_util import safe_open_write
 from meteostore import util
 
 DATA_PATH = os.path.join("data", "raw")
@@ -93,9 +93,12 @@ def ensure_stations_years_sane(stations, from_year, to_year):
     return station_codes, from_year, to_year
 
 
-def _prepare_taf_download(station_codes, file_path, tmp_dir_path, tmp_file_path, force_refresh):
+def _prepare_taf_download(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+        station_codes, file_path, tmp_dir_path, tmp_file_path, force_refresh, read_only):
     """A helper function for download_tafs() to recover from a possible previous failed download
     and to create and clean up the directory structure"""
+    if force_refresh and read_only:
+        raise ValueError("I can't simultaneously do force_refresh and read_only.")
     if os.path.exists(file_path) and force_refresh:
         os.unlink(file_path)
     if os.path.exists(tmp_file_path):
@@ -105,6 +108,9 @@ def _prepare_taf_download(station_codes, file_path, tmp_dir_path, tmp_file_path,
         with zipfile.ZipFile(file_path, "r") as old_zip_file:
             if set(old_zip_file.namelist()) >= set((s + ".zip" for s, _ in station_codes)):
                 return True
+            if read_only:
+                raise FileNotFoundError("I do not have complete TAFs cached, but was asked to run "
+                                        "read-only")
             # If the output file already exists but is incomplete, we'll have to recover
             # We expand the files into the temporary directory
             if not os.path.exists(tmp_dir_path):
@@ -141,13 +147,15 @@ def _finish_download(year, file_path, tmp_dir_path, tmp_file_path):
     os.rmdir(tmp_dir_path)
 
 
-def download_tafs(stations, from_year, to_year, force_refresh=False):
+def download_tafs( # pylint: disable=too-many-locals
+        stations, from_year, to_year, force_refresh=False, read_only=False):
     """
     Download all TAFs not yet loaded into our data cache.
     :param stations: List of stations as StationDesc tuples
     :param from_year: Year from which to download, inclusive
     :param to_year: Year to which to download, inclusive
     :param force_refresh: If true, delete old datastore files
+    :param read_only: Only ensure there's nothing to download, raise exception if there is
     """
     station_codes, from_year, to_year = ensure_stations_years_sane(stations, from_year, to_year)
 
@@ -160,7 +168,7 @@ def download_tafs(stations, from_year, to_year, force_refresh=False):
         tmp_file_path = file_path + "~"
 
         if _prepare_taf_download(station_codes, file_path, tmp_dir_path, tmp_file_path,
-                                 force_refresh):
+                                 force_refresh, read_only):
             # We're already done
             continue
 
@@ -224,7 +232,7 @@ StationTafRecord = namedtuple("StationTafRecord", ["station", "tafs"])
 
 
 # noinspection PyShadowingNames
-def get_tafs(stations, from_year, to_year):
+def get_tafs(stations, from_year, to_year, read_only=False):
     """
     Get TAFs for the given times and places from the store. Download if need be.
     The result is a generator of StationTafRecords which in turn contain
@@ -233,9 +241,10 @@ def get_tafs(stations, from_year, to_year):
     :param stations: A list of meteostore.StationDesc tuples
     :param from_year: Year from which to serve data, inclusive
     :param to_year: Year to which to serve data, inclusive
+    :param read_only Only read cached TAFs, raise exception if they're not in cache
     """
     stations = list(stations)
-    download_tafs(stations, from_year, to_year)
+    download_tafs(stations, from_year, to_year, force_refresh=False, read_only=read_only)
     years = list(range(from_year, to_year + 1))
     # ExitStack will provide context management for all the files we're opening, i.e., close them
     # for us once we're finished or raise and exception

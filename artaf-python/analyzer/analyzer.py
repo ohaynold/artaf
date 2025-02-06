@@ -155,7 +155,7 @@ class HourlyHistogramProcessor:
                       [field_name, prev, curr, final, ncount]
             self.out_writers[job_index].writerow(new_row)
 
-    def process(self, raw_tafs):
+    def process(self, stations, year_from, year_to):
         """
         Process TAFs
         :param raw_tafs: raw TAFs as sequence of station, tafs tuples
@@ -187,10 +187,13 @@ class HourlyHistogramProcessor:
             self.processed_errors = 0
 
             # map() is a generator -- list forces evaluation
-            list(map(self._process_station, raw_tafs))
+            evaluations = [(s, year_from, year_to) for s in stations]
+            list(map(self._process_station, evaluations))
 
-    def _process_station(self, station_data):
-        station, station_tafs = station_data
+    def _process_station(self, params):
+        station, year_from, year_to = params
+        tafs = meteostore.get_tafs([station], year_from, year_to, read_only=True)
+        station, station_tafs = next(tafs)
         parsed_tafs = meteoparse.parse_tafs(station_tafs)
         expanded_tafs = meteoparse.regularize_tafs(parsed_tafs)
         arranged_forecasts = arrange_by_hour_forecast(expanded_tafs, station.station)
@@ -237,10 +240,9 @@ if __name__ == "__main__":
               end="", flush=True)
 
 
-    selected_raw_tafs = meteostore.get_tafs(meteostore.get_station_list()[:3], 2023, 2024)
     processor = HourlyHistogramProcessor(my_jobs, os.path.join("output", "tmp"),
                                          progress_callback=progress)
-    processor.process(selected_raw_tafs)
+    processor.process(meteostore.get_station_list()[:3], 2023, 2024)
     print(f"\rProcessed {processor.processed_hours:,} station hours, encountered "
           f"{processor.processed_errors:,} errors...")
     print("Done.")

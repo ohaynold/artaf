@@ -63,10 +63,9 @@ def process_data():
     run_config = process_arguments()
 
     print("Getting TAFs...")
-    raw_tafs = meteostore.get_tafs(run_config.stations, run_config.year_from,
-                                   run_config.year_to)
+    meteostore.download_tafs(run_config.stations, run_config.year_from, run_config.year_to)
 
-    print("Parsing and regularizing TAFs...")
+    print("Parsing and analyzing TAFs...")
 
     def progress(hours, errors):
         """Display progress"""
@@ -77,7 +76,7 @@ def process_data():
         analyzer.DEFAULT_JOBS,
         os.path.join("data", "histograms", run_config.config_name),
         progress_callback=progress)
-    processor.process(raw_tafs)
+    processor.process(run_config.stations, run_config.year_from, run_config.year_to)
     print(f"\rProcessed {processor.processed_hours:,} station hours, encountered "
           f"{processor.processed_errors:,} errors...")
     print("Done.")
