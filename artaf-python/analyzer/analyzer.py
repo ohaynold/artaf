@@ -274,8 +274,8 @@ class HourlyHistogramProcessor:  # pylint: disable=too-many-instance-attributes
                     station_processed_errors = 0
                     station_processed_hours = 0
             elif isinstance(hourly_data, meteoparse.TafParseError):
-                context.write_error(repr(hourly_data.message_text), repr(hourly_data.error),
-                                    repr(hourly_data.hint))
+                context.write_error(str(hourly_data.message_text), str(hourly_data.error),
+                                    str(hourly_data.hint))
                 station_processed_errors += 1
             else:
                 raise TypeError("Unexpected message type encountered.")

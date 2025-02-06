@@ -28,7 +28,7 @@ def regularize_taf(taf):
         while hour_starting < f.valid_until:
             if res.from_lines and hour_starting != res.from_lines[-1].valid_until:
                 return meteoparse.tafparser.TafParseError(error="Non-contiguous hours",
-                                                          message_text=repr(taf),
+                                                          message_text=str(taf),
                                                           hint=None)
             res.from_lines.append(f._replace(valid_from=hour_starting,
                                              valid_until=hour_starting + ONE_HOUR))
