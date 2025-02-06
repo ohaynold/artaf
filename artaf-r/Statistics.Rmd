@@ -20,15 +20,16 @@ knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ```{r}
-lines <- read_csv("../data/TAF Lines tiny_data.csv.zip",
-                col_types = cols(
-                aerodrome = "f",
-                issue_time = "T",
-                amendment = "f",
-                hour_starting = "T",
-                wind_speed = "n",
-                wind_gust = "n"
-              ))
+lines <- read_csv("../data/histograms/full_set/hist YearlyStations.csv.zip",
+                  col_types = cols(
+                    aerodrome = "f",
+                    year="i",
+                    variable="f",
+                    previous="n",
+                    current="n",
+                    final="n",
+                    count="i"
+                  ))
 
 stations <- read_csv("../config/stations.csv", 
                      col_types = cols(
@@ -52,9 +53,15 @@ We have loaded `r nrow(lines)` data lines for `r length(unique(lines$aerodrome))
 ## Distribution of Wind Speeds
 
 ```{r}
+  wind_speed_hist <- lines %>% 
+      filter(variable=="wind_speed" & current < 50) %>%
+      group_by(current) %>%
+      summarize(count=sum(count)) %>%
+      ungroup()
+
  print(
-   ggplot(lines, aes(x=wind_speed)) + 
-     geom_histogram(binwidth = 1) +
+   ggplot(wind_speed_hist, aes(x=current)) + 
+     geom_histogram(aes(weight=count), binwidth = 1) +
      labs(title="Histogram of Wind Speeds", x="Wind Speed kts", y="Count") +
      theme_bw()
    )
@@ -62,24 +69,18 @@ We have loaded `r nrow(lines)` data lines for `r length(unique(lines$aerodrome))
 
 
 ```{r}
- print(
-   ggplot(lines %>% filter(!is.na(wind_gust)), aes(x=wind_gust)) + 
-     geom_histogram(binwidth = 1) +
-     labs(title="Histogram of Wind Gusts", subtitle="(not including no gust)", x="Wind Gust kts", y="Count") +
-     theme_bw()
-   )
-```
-
-```{r}
-plotdat <- lines %>%
-  group_by(aerodrome) %>%
-  summarise(avg_wind = mean(wind_speed)) %>%
-  left_join(stations, by=c("aerodrome"))
+wind_speed_avg <- lines %>% 
+      filter(variable=="wind_speed") %>%
+      group_by(aerodrome) %>%
+      summarize(current=mean(current)) %>%
+      ungroup() %>%
+      left_join(stations, by=c("aerodrome")) %>%
+      filter(substr(aerodrome, 1, 1)=="K" | substr(aerodrome, 1, 2)=="PA" | substr(aerodrome, 1, 2)=="PH") 
 
 
 plot_usmap(fill="grey") +
-  geom_sf(data=usmap_transform(plotdat, input_names = c("longitude", "latitude")),
-             aes(colour=avg_wind)) +
+  geom_sf(data=usmap_transform(wind_speed_avg, input_names = c("longitude", "latitude")),
+             aes(colour=current)) +
   scale_colour_gradientn(colours = heat.colors(10)) +
   labs(title = "Average wind forecast speed by location", colour="Knots")
 ```
