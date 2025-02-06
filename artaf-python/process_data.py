@@ -2,16 +2,12 @@
 be executed with the project directory as the working directory."""
 import argparse
 import collections
-import csv
 import os
 import os.path
-import zipfile
 
 import yaml
 
-import analyzer.analyzer
-import artaf_util
-import meteoparse
+import analyzer
 import meteostore
 
 CONFIG_PATH = os.path.join("config", "config.yaml")
@@ -72,48 +68,19 @@ def process_data():
 
     print("Parsing and regularizing TAFs...")
 
-    output_dir = "data"
-    os.makedirs(output_dir, exist_ok=True)
-    lines_written = 0
-    errors = 0
-    output_path = os.path.join(output_dir, f"TAF Lines {run_config.config_name}.csv.zip")
-    error_path = os.path.join(output_dir, f"TAF Errors {run_config.config_name}.csv.zip")
-    with (
-        artaf_util.open_compressed_text_zip_write(
-            output_path, "TAF Lines.csv", "ascii", zipfile.ZIP_BZIP2) as out_file,
-        artaf_util.open_compressed_text_zip_write(
-            error_path, "TAF Errors.csv", "ascii", zipfile.ZIP_BZIP2) as err_file
-    ):
-        writer = csv.writer(out_file)
-        writer.writerow(["aerodrome", "issue_time", "amendment",
-                         "hour_starting", "wind_speed", "wind_gust"])
-        error_writer = csv.writer(err_file)
-        error_writer.writerow(["raw_message", "error", "info"])
+    def progress(hours, errors):
+        """Display progress"""
+        print(f"\rProcessed {hours:,} station hours, encountered {errors:,} errors...",
+              end="", flush=True)
 
-        for station, taf_messages in raw_tafs:
-            cooked_tafs = meteoparse.regularize_tafs( meteoparse.parse_tafs(taf_messages))
-            cooked_tafs = analyzer.analyzer.arrange_by_hour_forecast(cooked_tafs, station.station)
-            for taf in cooked_tafs:
-                if isinstance(taf, analyzer.analyzer.HourlyGroup):
-                    for line in taf.items:
-                        writer.writerow([station.station, line.issued_at.strftime(
-                            "%Y-%m-%dT%H:%M"),
-                                      line.amendment.name if line.amendment is not None else None,
-                                      taf.hour_starting.strftime("%Y-%m-%dT%H:%M"),
-                                      line.conditions.wind_speed,
-                                      line.conditions.wind_gust])
-                        lines_written += 1
-                    if lines_written % 10_000 == 0:
-                        print(f"\rProcessing {station.station}, wrote {lines_written:,} hourly TAF "
-                              f"lines, {errors} errors...",
-                              flush=True, end="")
-                elif isinstance(taf, meteoparse.TafParseError):
-                    error_writer.writerow([taf.message_text, taf.error, taf.hint])
-                    errors += 1
-                else:
-                    raise TypeError(f"Unexpected parser output of type {type(taf)}")
-    print(f"\rWrote {lines_written:,} hourly TAF lines, {errors} errors.                          ")
-    print(f"Output written to {output_path}.")
+    processor = analyzer.HourlyHistogramProcessor(
+        analyzer.DEFAULT_JOBS,
+        os.path.join("data", "histograms", run_config.config_name),
+        progress_callback=progress)
+    processor.process(raw_tafs)
+    print(f"\rProcessed {processor.processed_hours:,} station hours, encountered "
+          f"{processor.processed_errors:,} errors...")
+    print("Done.")
 
     print("Success!")
 

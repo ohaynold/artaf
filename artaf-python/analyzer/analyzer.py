@@ -1,9 +1,13 @@
 """This provide summary statistics of the TAFs, i.e., the core of our analysis once we've got
 all the data"""
+import contextlib
 import csv
 import datetime
+import os.path
+import zipfile
 from collections import namedtuple
 
+import artaf_util
 import meteoparse.tafparser
 import meteostore
 
@@ -69,13 +73,14 @@ class HourlyHistogramKeeper:  # pylint: disable=too-many-instance-attributes
     values: A dictionary from names to functions transforming a HourlyItem into some value
     """
 
-    def __init__(self, job, callback):
+    def __init__(self, job, callback, callback_info):
         self.job = job
         self.name = self.job.name
         self.ascending_group_by = list(self.job.ascending_group_by.items())
         self.other_group_by = list(self.job.other_group_by.items())
         self.values = list(self.job.values.items())
         self.callback = callback
+        self.callback_info = callback_info
 
         self.current_ascending_group = None
         self.counts = {}
@@ -105,7 +110,7 @@ class HourlyHistogramKeeper:  # pylint: disable=too-many-instance-attributes
         if ascending_group != self.current_ascending_group:
             if len(self.counts) > 0:
                 self.counts = dict(sorted(list(self.counts.items()), key=lambda x: x[0]))
-                self.callback(ascending_group, self.counts)
+                self.callback(ascending_group, self.counts, self.callback_info)
             self.current_ascending_group = ascending_group
             self.counts = {}
 
@@ -124,53 +129,118 @@ class HourlyHistogramKeeper:  # pylint: disable=too-many-instance-attributes
                 previous_value = current_value
 
 
-if __name__ == "__main__":
-    lines_written = [0]
-    out_csv = []
+class HourlyHistogramProcessor:
+    """Automates the parsing and processing of TAFs"""
 
+    def __init__(self, jobs, output_dir, progress_callback=None):
+        """
+        Make a new processor
+        :param jobs: A list of HourlyHistogramJob objects
+        :param output_dir: the directory in which to write output
+        :param progress_callback: a function(hours_parsed, errors_encountered) to display progress
+        """
+        self.jobs = jobs
+        self.output_dir = output_dir
+        self.out_files = None
+        self.error_file = None
+        self.out_writers = None
+        self.error_writer = None
+        self.processed_hours = 0
+        self.processed_errors = 0
+        self.progress_callback = progress_callback
 
-    def inc_counts(asc_group, counts):
-        """Increment line count"""
-        lines_written[0] += len(counts)
+    def _receive_output(self, ascending_group, counts, job_index):
         for (other_group, field_name, prev, curr, final), ncount in counts.items():
-            new_row = list(asc_group) + list(other_group) + \
-                                  [field_name, prev, curr, final, ncount]
-            out_csv[0].writerow(new_row)
+            new_row = list(ascending_group) + list(other_group) + \
+                      [field_name, prev, curr, final, ncount]
+            self.out_writers[job_index].writerow(new_row)
+
+    def process(self, raw_tafs):
+        """
+        Process TAFs
+        :param raw_tafs: raw TAFs as sequence of station, tafs tuples
+        """
+        os.makedirs(self.output_dir, exist_ok=True)
+        with contextlib.ExitStack() as exit_stack:
+            self.out_files = [
+                exit_stack.enter_context(
+                    artaf_util.open_compressed_text_zip_write(
+                        os.path.join(self.output_dir, f"hist {job.name}.csv.zip"),
+                        f"hist {job.name}.csv", "ascii", zipfile.ZIP_DEFLATED))
+                for job in self.jobs]
+            self.error_file = exit_stack.enter_context(
+                artaf_util.open_compressed_text_zip_write(
+                    os.path.join(self.output_dir, "errors.csv.zip"),
+                    "errors.csv", "ascii", zipfile.ZIP_DEFLATED))
+
+            self.out_writers = [csv.writer(f) for f in self.out_files]
+            header_keepers = [HourlyHistogramKeeper(j, None, None) for j in self.jobs]
+            for i in range(len(self.jobs)):
+                ascending_group_headers, other_group_headers = header_keepers[i].get_field_names()
+                self.out_writers[i].writerow(
+                    ascending_group_headers + other_group_headers +
+                    ["previous", "current", "final", "count"])
+            self.error_writer = csv.writer(self.error_file)
+            self.error_writer.writerow(["taf", "error", "info"])
+
+            self.processed_hours = 0
+            self.processed_errors = 0
+
+            # map() is a generator -- list forces evaluation
+            list(map(self._process_station, raw_tafs))
+
+    def _process_station(self, station_data):
+        station, station_tafs = station_data
+        parsed_tafs = meteoparse.parse_tafs(station_tafs)
+        expanded_tafs = meteoparse.regularize_tafs(parsed_tafs)
+        arranged_forecasts = arrange_by_hour_forecast(expanded_tafs, station.station)
+        station_processed_hours = 0
+        keepers = [HourlyHistogramKeeper(
+            self.jobs[i], self._receive_output, i) for i in range(len(self.jobs))]
+        for hourly_data in arranged_forecasts:
+            if isinstance(hourly_data, HourlyGroup):
+                for k in keepers:
+                    k.process_hourly_group(hourly_data)
+                self.processed_hours += 1
+                station_processed_hours += 1
+                if self.processed_hours % 10000 == 0:
+                    if self.progress_callback is not None:
+                        self.progress_callback(self.processed_hours, self.processed_errors)
+            elif isinstance(hourly_data, meteoparse.TafParseError):
+                self.error_writer.writerow([hourly_data.message_text,
+                                            hourly_data.error,
+                                            hourly_data.hint])
+                self.processed_errors += 1
+            else:
+                raise TypeError("Unexpected message type encountered.")
+        return station_processed_hours
 
 
-    keeper = HourlyHistogramKeeper(
-        HourlyHistogramJob(name="MonthlyStations",
-                           ascending_group_by={
-                               "aerodrome": lambda x: x.aerodrome,
-                               "year": lambda x: x.hour_starting.strftime("%Y")
-                           },
-                           other_group_by={},
-                           values={
-                               "wind_speed": lambda x: x.conditions.wind_speed
-                           }
-                           ),
-        inc_counts)
+DEFAULT_JOBS = [HourlyHistogramJob(name="YearlyStations",
+                                   ascending_group_by={
+                                       "aerodrome": lambda x: x.aerodrome,
+                                       "year": lambda x: x.hour_starting.strftime("%Y")
+                                   },
+                                   other_group_by={},
+                                   values={
+                                       "wind_speed": lambda x: x.conditions.wind_speed
+                                   }
+                                   )]
 
-    with open("output/tmp histogram.csv", "w", encoding="ascii") as out_file:
-        out_csv.append(csv.writer(out_file))
-        group_field_names_asc, group_field_names_other = keeper.get_field_names()
-        out_csv[0].writerow(group_field_names_asc + group_field_names_other +
-                         ["variable", "previous", "current", "final", "count"])
+if __name__ == "__main__":
+    my_jobs = DEFAULT_JOBS
 
-        i = 0
-        for station, raw_tafs in meteostore.get_tafs(meteostore.get_station_list()[:30], 2023,
-                                                     2024):
-            raw_tafs = meteoparse.parse_tafs(raw_tafs)
-            expanded = meteoparse.regularize_tafs(raw_tafs)
-            arranged = arrange_by_hour_forecast(expanded, station.station)
-            for line in arranged:
-                if isinstance(line, HourlyGroup):
-                    keeper.process_hourly_group(line)
-                    i += 1
-                    if i % 10_000 == 0:
-                        print(
-                            f"\rProcessed {i:,} unique hours, wrote {lines_written[0]:,} histogram "
-                            f"lines..", end="", flush=True)
-    print(f"\rProcessed {i} unique hours, wrote {lines_written[0]} histogram "
-          f"lines..")
+
+    def progress(hours, errors):
+        """Display progress"""
+        print(f"\rProcessed {hours:,} station hours, encountered {errors:,} errors...",
+              end="", flush=True)
+
+
+    selected_raw_tafs = meteostore.get_tafs(meteostore.get_station_list()[:3], 2023, 2024)
+    processor = HourlyHistogramProcessor(my_jobs, os.path.join("output", "tmp"),
+                                         progress_callback=progress)
+    processor.process(selected_raw_tafs)
+    print(f"\rProcessed {processor.processed_hours:,} station hours, encountered "
+          f"{processor.processed_errors:,} errors...")
     print("Done.")
