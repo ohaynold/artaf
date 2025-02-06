@@ -123,6 +123,8 @@ class TafTreeTransformer(lark.Transformer):
             if hasattr(wind_group, "wind_gust_group") \
             else None
         cloud_layers_group = from_conditions.clouds['cloud_layer']
+        # TODO: I imagine this has to change, now that the clouds() method gets auto-called by lark.
+        # TODO: I have no idea how the pieces all fit together though.
         return WeatherConditions(wind_speed=wind_speed, wind_gust=wind_gust,
                                  cloud_layers=cloud_layers_group)
         # TODO: Unroll TEMPO and PROB changes
@@ -166,6 +168,77 @@ class TafTreeTransformer(lark.Transformer):
         if token == "AMD":
             return token.update(value=AmendmentType.AMENDED)
         return IndexError("Unknown amendment type.")
+
+    def clouds(self, branches):
+        """Produces a list of cloud-shaped objects"""
+        cloud_layers = TreeAccessor(branches)
+        cloud_layers_list = list()
+        cloud_vv = cloud_layers['clouds_vertical_visibility']
+        cloud_skc = cloud_layers['CLOUDS_SKY_CLEAR']
+
+        if len(cloud_skc) > 0:
+            cloud_layers_list.append(CloudLayer(0, CloudCoverage("SKC")))
+        elif len(cloud_vv) > 0:
+            cloud_layers_list.append(CloudLayer(
+                int(cloud_vv[0].CLOUDS_ALTITUDE) * 100,
+                CloudCoverage("VV")
+            ))
+        else:
+            for cloud_layer in cloud_layers["cloud_layer"]:
+                cloud_layers_list.append(CloudLayer(
+                    int(cloud_layer.CLOUDS_ALTITUDE) * 100,
+                    CloudCoverage(cloud_layer.CLOUD_LAYER_COVERAGE),
+                    cloud_layer.CLOUD_LAYER_CUMULONIMBUS
+                ))
+
+        return cloud_layers_list
+
+
+class CloudLayer:
+
+    def __init__(self, altitude, coverage, cb=""):
+        self.coverage_altitude = altitude.value
+        self.coverage_obj = CloudCoverage(coverage)
+        self.coverage_cb = True if cb == "CB" else False
+        print(self)
+    
+    def altitude(self):
+        return self.coverage_altitude
+    
+    def coverage(self):
+        return self.coverage_obj
+    
+    def is_cumulonimbus(self):
+        return self.coverage_cb
+    
+
+class CloudCoverage:
+
+    def __init__(self, coverage):
+        self.coverage_string = coverage
+
+    def __repr__(self):
+        return self.coverage_string
+
+    def __str__(self):
+        return self.coverage_string
+    
+    def __float__(self):
+        match self.coverage_string:
+            case "SKC":
+                return 0.0
+            case "FEW":
+                return 0.25
+            case "SCT":
+                return .375
+            case "BKN":
+                return .6875
+            case "OVC":
+                return 1.0
+            case "VV":
+                # I picked this arbitrarily. I don't know if there's a number that makes more sense to represent a VV condition.
+                return 1.1
+
 
 
 # Was disabled above to allow for Lark transformer method names
@@ -231,7 +304,7 @@ if __name__ == "__main__":
         for station, raw_tafs in meteostore.get_tafs(meteostore.get_station_list(), 2010, 2024):
             for taf in parse_tafs(raw_tafs):
                 if isinstance(taf, ParsedForecast):
-                    # print(taf)
+                    print(taf)
                     pass
                 elif isinstance(taf, TafParseError):
                     error_log.writerow([taf.message_text, taf.error, taf.hint])
