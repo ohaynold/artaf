@@ -48,7 +48,7 @@ For now, this is just same sample analysis as a framework.
 
 # Some Summary Statistics
 
-We have loaded `r nrow(lines)` data lines for `r length(unique(lines$aerodrome))` aerodromes for configuration tiny_data.
+We have loaded `r nrow(lines)` data lines for `r length(unique(lines$aerodrome))` aerodromes for configuration full_set.
 
 ## Distribution of Wind Speeds
 
