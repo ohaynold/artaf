@@ -5,6 +5,16 @@
 #
 # To run on a tiny dataset for testing, pass command line arguments --config tiny_data
 
+if [[ "$OSTYPE" == "cygwin" || "$OSTYPE" == "msys" ]] ; then
+    python_command() { 
+        python $@ 
+    }
+else
+    python_command() { 
+        python3 $@ 
+    }
+fi
+
 . ./activatevenv.sh
 if [[ $VIRTUAL_ENV_PROMPT != "venv" ]]; then
     answer="a"
@@ -18,4 +28,4 @@ if [[ $VIRTUAL_ENV_PROMPT != "venv" ]]; then
     done
 fi
 
-python3 artaf-python/process_data.py "$@"
+python_command artaf-python/process_data.py "--config tiny_data"
