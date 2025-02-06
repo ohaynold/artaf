@@ -1,12 +1,16 @@
 """This provide summary statistics of the TAFs, i.e., the core of our analysis once we've got
 all the data"""
+import concurrent.futures
 import contextlib
 import csv
 import datetime
+import multiprocessing
 import os.path
+import time
 import zipfile
 from collections import namedtuple
 
+import analyzer.jobs
 import artaf_util
 import meteoparse.tafparser
 import meteostore
@@ -56,10 +60,6 @@ def arrange_by_hour_forecast(tafs, aerodrome):
             yield taf
         else:
             raise TypeError("Unexpected parser output")
-
-
-HourlyHistogramJob = namedtuple("HourlyHistogramJob",
-                                ["name", "ascending_group_by", "other_group_by", "values"])
 
 
 class HourlyHistogramKeeper:  # pylint: disable=too-many-instance-attributes
@@ -129,15 +129,38 @@ class HourlyHistogramKeeper:  # pylint: disable=too-many-instance-attributes
                 previous_value = current_value
 
 
-class HourlyHistogramProcessor:
+class ParallelContext:
+    """This is a placeholder class for HourlyHistogramProcessor that can get pickled and passed
+    to different processes in parallel processing."""
+
+    def __init__(self, jobs, output_queue):
+        self.output_queue = output_queue
+        self.jobs = jobs
+
+    def receive_output(self, ascending_group, counts, job_index):
+        """Remote access to HourlyHistogramProcessor.receive_output"""
+        self.output_queue.put(("receive_output", (ascending_group, counts, job_index)))
+
+    def progress(self, station_processed_hours, station_processed_errors):
+        """Remote access to HourlyHistogramProcessor.progress"""
+        self.output_queue.put(("progress", (station_processed_hours,
+                                            station_processed_errors)))
+
+    def write_error(self, message_text, error, hint):
+        """Remote access to HourlyHistogramProcessor.write_error"""
+        self.output_queue.put(("write_error", (message_text, error, hint)))
+
+
+class HourlyHistogramProcessor:  # pylint: disable=too-many-instance-attributes
     """Automates the parsing and processing of TAFs"""
 
-    def __init__(self, jobs, output_dir, progress_callback=None):
+    def __init__(self, jobs, output_dir, progress_callback=None, parallel=False):
         """
         Make a new processor
         :param jobs: A list of HourlyHistogramJob objects
         :param output_dir: the directory in which to write output
         :param progress_callback: a function(hours_parsed, errors_encountered) to display progress
+        :param parallel: Process in parallel
         """
         self.jobs = jobs
         self.output_dir = output_dir
@@ -148,49 +171,89 @@ class HourlyHistogramProcessor:
         self.processed_hours = 0
         self.processed_errors = 0
         self.progress_callback = progress_callback
-
-    def _receive_output(self, ascending_group, counts, job_index):
-        for (other_group, field_name, prev, curr, final), ncount in counts.items():
-            new_row = list(ascending_group) + list(other_group) + \
-                      [field_name, prev, curr, final, ncount]
-            self.out_writers[job_index].writerow(new_row)
+        self.output_queue = None
+        self.parallel = parallel
 
     def process(self, stations, year_from, year_to):
         """
         Process TAFs
-        :param raw_tafs: raw TAFs as sequence of station, tafs tuples
+        :param stations: A list of stations to process
+        :param year_from: Process from year
+        :param year_to: Process to year
         """
         os.makedirs(self.output_dir, exist_ok=True)
         with contextlib.ExitStack() as exit_stack:
-            self.out_files = [
-                exit_stack.enter_context(
-                    artaf_util.open_compressed_text_zip_write(
-                        os.path.join(self.output_dir, f"hist {job.name}.csv.zip"),
-                        f"hist {job.name}.csv", "ascii", zipfile.ZIP_DEFLATED))
-                for job in self.jobs]
-            self.error_file = exit_stack.enter_context(
-                artaf_util.open_compressed_text_zip_write(
-                    os.path.join(self.output_dir, "errors.csv.zip"),
-                    "errors.csv", "ascii", zipfile.ZIP_DEFLATED))
-
-            self.out_writers = [csv.writer(f) for f in self.out_files]
-            header_keepers = [HourlyHistogramKeeper(j, None, None) for j in self.jobs]
-            for i in range(len(self.jobs)):
-                ascending_group_headers, other_group_headers = header_keepers[i].get_field_names()
-                self.out_writers[i].writerow(
-                    ascending_group_headers + other_group_headers +
-                    ["previous", "current", "final", "count"])
-            self.error_writer = csv.writer(self.error_file)
-            self.error_writer.writerow(["taf", "error", "info"])
+            self._initialize_output_files(exit_stack)
 
             self.processed_hours = 0
             self.processed_errors = 0
 
             # map() is a generator -- list forces evaluation
             evaluations = [(s, year_from, year_to) for s in stations]
-            list(map(self._process_station, evaluations))
+            if self.parallel:
+                with (concurrent.futures.ProcessPoolExecutor() as executor,
+                      multiprocessing.Manager() as manager):
+                    self.output_queue = manager.Queue()
+                    context = ParallelContext(self.jobs, self.output_queue)
+                    futures = [executor.submit(self._process_station, e, context) for e in
+                               evaluations]
+                    while True:
+                        if all(f.done() for f in futures) and self.output_queue.empty():
+                            break
+                        if not self.output_queue.empty():
+                            method, payload = self.output_queue.get()
+                            getattr(self, method)(*payload)
+                        else:
+                            time.sleep(0.1)
+                    list((f.result() for f in futures))
+            else:
+                context = self
+                for e in evaluations:
+                    self._process_station(e, context)
 
-    def _process_station(self, params):
+    def _initialize_output_files(self, exit_stack):
+        self.out_files = [
+            exit_stack.enter_context(
+                artaf_util.open_compressed_text_zip_write(
+                    os.path.join(self.output_dir, f"hist {job.name}.csv.zip"),
+                    f"hist {job.name}.csv", "ascii", zipfile.ZIP_DEFLATED))
+            for job in self.jobs]
+        self.error_file = exit_stack.enter_context(
+            artaf_util.open_compressed_text_zip_write(
+                os.path.join(self.output_dir, "errors.csv.zip"),
+                "errors.csv", "ascii", zipfile.ZIP_DEFLATED))
+        self.out_writers = [csv.writer(f) for f in self.out_files]
+        header_keepers = [HourlyHistogramKeeper(j, None, None) for j in self.jobs]
+        for i in range(len(self.jobs)):
+            ascending_group_headers, other_group_headers = header_keepers[i].get_field_names()
+            self.out_writers[i].writerow(
+                ascending_group_headers + other_group_headers +
+                ["variable", "previous", "current", "final", "count"])
+        self.error_writer = csv.writer(self.error_file)
+        self.error_writer.writerow(["taf", "error", "info"])
+
+    def receive_output(self, ascending_group, counts, job_index):
+        """
+        Receive output to be written into output files
+        """
+        for (other_group, field_name, prev, curr, final), ncount in counts.items():
+            new_row = list(ascending_group) + list(other_group) + \
+                      [field_name, prev, curr, final, ncount]
+            self.out_writers[job_index].writerow(new_row)
+
+    def progress(self, station_processed_hours, station_processed_errors):
+        """Receive a progress message to be displayed"""
+        self.processed_hours += station_processed_hours
+        self.processed_errors += station_processed_errors
+        if self.progress_callback is not None:
+            self.progress_callback(self.processed_hours, self.processed_errors)
+
+    def write_error(self, message_text, error, hint):
+        """Receive a parse error to be logged"""
+        self.error_writer.writerow([message_text, error, hint])
+
+    @staticmethod
+    def _process_station(params, context):
         station, year_from, year_to = params
         tafs = meteostore.get_tafs([station], year_from, year_to, read_only=True)
         station, station_tafs = next(tafs)
@@ -198,40 +261,29 @@ class HourlyHistogramProcessor:
         expanded_tafs = meteoparse.regularize_tafs(parsed_tafs)
         arranged_forecasts = arrange_by_hour_forecast(expanded_tafs, station.station)
         station_processed_hours = 0
+        station_processed_errors = 0
         keepers = [HourlyHistogramKeeper(
-            self.jobs[i], self._receive_output, i) for i in range(len(self.jobs))]
+            context.jobs[i], context.receive_output, i) for i in range(len(context.jobs))]
         for hourly_data in arranged_forecasts:
             if isinstance(hourly_data, HourlyGroup):
                 for k in keepers:
                     k.process_hourly_group(hourly_data)
-                self.processed_hours += 1
                 station_processed_hours += 1
-                if self.processed_hours % 10000 == 0:
-                    if self.progress_callback is not None:
-                        self.progress_callback(self.processed_hours, self.processed_errors)
+                if station_processed_hours % 10000 == 0:
+                    context.progress(station_processed_hours, station_processed_errors)
+                    station_processed_errors = 0
+                    station_processed_hours = 0
             elif isinstance(hourly_data, meteoparse.TafParseError):
-                self.error_writer.writerow([hourly_data.message_text,
-                                            hourly_data.error,
-                                            hourly_data.hint])
-                self.processed_errors += 1
+                context.write_error(repr(hourly_data.message_text), repr(hourly_data.error),
+                                    repr(hourly_data.hint))
+                station_processed_errors += 1
             else:
                 raise TypeError("Unexpected message type encountered.")
-        return station_processed_hours
+        context.progress(station_processed_hours, station_processed_errors)
 
-
-DEFAULT_JOBS = [HourlyHistogramJob(name="YearlyStations",
-                                   ascending_group_by={
-                                       "aerodrome": lambda x: x.aerodrome,
-                                       "year": lambda x: x.hour_starting.strftime("%Y")
-                                   },
-                                   other_group_by={},
-                                   values={
-                                       "wind_speed": lambda x: x.conditions.wind_speed
-                                   }
-                                   )]
 
 if __name__ == "__main__":
-    my_jobs = DEFAULT_JOBS
+    my_jobs = analyzer.jobs.DEFAULT_JOBS
 
 
     def progress(hours, errors):

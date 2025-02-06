@@ -1,6 +1,7 @@
 # Settings that apply to all configurations unless overridden
 general:
   year_to: 2024
+  parallel: true
 
 # Process our full dataset
 full_set:
@@ -9,6 +10,7 @@ full_set:
 # Run on a very limited test dataset to save time
 tiny_data:
   year_from: 2023
+  parallel: false
   # noinspection SpellCheckingInspection
   aerodromes:
     - KABE

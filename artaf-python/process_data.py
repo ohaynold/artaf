@@ -29,8 +29,9 @@ def get_config(config_name):
     return config
 
 
-RunConfig = collections.namedtuple("RunConfig",
-                                   ["stations", "year_from", "year_to", "config_name"])
+RunConfig = collections.namedtuple(
+    "RunConfig",
+["stations", "year_from", "year_to", "config_name", "parallel"])
 
 
 def process_arguments():
@@ -46,13 +47,14 @@ def process_arguments():
     config = get_config(config_name)
     year_from = config["year_from"]
     year_to = config["year_to"]
+    parallel = config["parallel"]
     stations = meteostore.get_station_list()
     if "aerodromes" in config:
         stations = list(filter(lambda station: station.station in config["aerodromes"], stations))
     print(f"Running in configuration {arguments.config} for years from {year_from} through "
           f"{year_to} with {len(stations)} aerodromes.")
     return RunConfig(stations=stations, year_from=year_from, year_to=year_to,
-                     config_name=config_name)
+                     config_name=config_name, parallel=parallel)
 
 
 def process_data():
@@ -75,7 +77,8 @@ def process_data():
     processor = analyzer.HourlyHistogramProcessor(
         analyzer.DEFAULT_JOBS,
         os.path.join("data", "histograms", run_config.config_name),
-        progress_callback=progress)
+        progress_callback=progress,
+        parallel=run_config.parallel)
     processor.process(run_config.stations, run_config.year_from, run_config.year_to)
     print(f"\rProcessed {processor.processed_hours:,} station hours, encountered "
           f"{processor.processed_errors:,} errors...")

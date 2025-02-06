@@ -4,7 +4,7 @@ import csv
 import os.path
 from collections import namedtuple
 
-StationDesc = namedtuple("station_desc",
+StationDesc = namedtuple("StationDesc",
                          ["station", "name", "latitude", "longitude", "center"])
 
 STATION_PATH = os.path.join("config", "stations.csv")
