@@ -172,47 +172,57 @@ class TafTreeTransformer(lark.Transformer):
     def clouds(self, branches):
         """Produces a list of cloud-shaped objects"""
         cloud_layers = TreeAccessor(branches)
-        cloud_layers_list = list()
+        cloud_layers_list = []
         cloud_vv = cloud_layers['clouds_vertical_visibility']
         cloud_skc = cloud_layers['CLOUDS_SKY_CLEAR']
 
         if len(cloud_skc) > 0:
-            cloud_layers_list.append(CloudLayer(0, CloudCoverage("SKC")))
+            cloud_layers_list.append(CloudLayer(0, CloudCoverage("SKC"), False))
         elif len(cloud_vv) > 0:
             cloud_layers_list.append(CloudLayer(
-                int(cloud_vv[0].CLOUDS_ALTITUDE) * 100,
-                CloudCoverage("VV")
+                int(cloud_vv[0].CLOUDS_ALTITUDE.value) * 100,
+                CloudCoverage("VV"),
+                False
             ))
         else:
             for cloud_layer in cloud_layers["cloud_layer"]:
+
+                cb = hasattr(cloud_layer, "CLOUD_LAYER_CUMULONIMBUS")
+
                 cloud_layers_list.append(CloudLayer(
-                    int(cloud_layer.CLOUDS_ALTITUDE) * 100,
+                    int(cloud_layer.CLOUDS_ALTITUDE.value) * 100,
                     CloudCoverage(cloud_layer.CLOUD_LAYER_COVERAGE),
-                    cloud_layer.CLOUD_LAYER_CUMULONIMBUS
+                    cb
                 ))
 
         return cloud_layers_list
 
 
 class CloudLayer:
-
-    def __init__(self, altitude, coverage, cb=""):
-        self.coverage_altitude = altitude.value
+    """
+    Represents the cloud layer with altitude in feet, cloud coverage as a
+    CloudCoverage object, and whether the cloud is cumulonimbus as a boolean.
+    """
+    def __init__(self, altitude, coverage, cb):
+        self.coverage_altitude = altitude
         self.coverage_obj = CloudCoverage(coverage)
-        self.coverage_cb = True if cb == "CB" else False
-        print(self)
-    
+        self.coverage_cb = cb
+
     def altitude(self):
+        """Return the cloud layer's altitude in feet"""
         return self.coverage_altitude
-    
+
     def coverage(self):
+        """Return the cloud layer's coverage as a CloudCoverage object"""
         return self.coverage_obj
-    
+
     def is_cumulonimbus(self):
+        """Return True if cumulonimbus, False if not"""
         return self.coverage_cb
-    
+
 
 class CloudCoverage:
+    """Represents a cloud layer coverage as either a string or float."""
 
     def __init__(self, coverage):
         self.coverage_string = coverage
@@ -222,7 +232,7 @@ class CloudCoverage:
 
     def __str__(self):
         return self.coverage_string
-    
+
     def __float__(self):
         match self.coverage_string:
             case "SKC":
@@ -236,7 +246,8 @@ class CloudCoverage:
             case "OVC":
                 return 1.0
             case "VV":
-                # I picked this arbitrarily. I don't know if there's a number that makes more sense to represent a VV condition.
+                # I picked this arbitrarily. I don't know if there's a number
+                # that makes more sense to represent a VV condition.
                 return 1.1
 
 
@@ -304,7 +315,6 @@ if __name__ == "__main__":
         for station, raw_tafs in meteostore.get_tafs(meteostore.get_station_list(), 2010, 2024):
             for taf in parse_tafs(raw_tafs):
                 if isinstance(taf, ParsedForecast):
-                    print(taf)
                     pass
                 elif isinstance(taf, TafParseError):
                     error_log.writerow([taf.message_text, taf.error, taf.hint])
