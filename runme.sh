@@ -10,7 +10,7 @@
 if [[ $VIRTUAL_ENV_PROMPT != "venv" ]]; then
     answer="a"
     while [[ "YyNn" != *"$answer"* ]] ; do
-        read -p "No Python virtual environment loaded, try running install.sh first. Continue anyway? [y/N]: " answer
+        read -r -p "No Python virtual environment loaded, try running install.sh first. Continue anyway? [y/N]: " answer
         answer=${answer:-N}
 
         if [[ "Nn" == *"$answer"* ]]; then
@@ -19,4 +19,4 @@ if [[ $VIRTUAL_ENV_PROMPT != "venv" ]]; then
     done
 fi
 
-python_command artaf-python/process_data.py "--config tiny_data"
+python_command artaf-python/process_data.py "$@"

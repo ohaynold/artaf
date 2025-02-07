@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env -S sh
 
 LOG_FILE="install.log"
 REQS_FILE="artaf-python/requirements.txt"
@@ -9,7 +9,7 @@ VENV_DIR="venv"
 echo "" > $LOG_FILE
 
 if [[ -d "./$VENV_DIR" ]]; then
-    read -p 'A Python virtual environment exists; delete it and start fresh? [Y/n] ' answer
+    read -r -p 'A Python virtual environment exists; delete it and start fresh? [Y/n] ' answer
     answer=${answer:-Y}
 
     if [[ $answer == "Y" || $answer == "y" ]]; then
@@ -31,10 +31,10 @@ echo "Installing pip..."
 python_command -m pip install --upgrade pip >>$LOG_FILE 2>&1
 
 # Make sure that the first pip in $PATH is in our new virtual environment
-[[ `which pip` == "$VIRTUAL_ENV"* ]] || notifyerror "pip"
+[[ $(which pip) == "$VIRTUAL_ENV"* ]] || notifyerror "pip"
 
 echo "Installing required packages:" && awk -F "==" '{print "    "$1}' $REQS_FILE
-[[ `pip install -r $REQS_FILE --log $LOG_FILE` ]] || notifyerror "a requirement"
+[[ $(pip install -r $REQS_FILE --log $LOG_FILE) ]] || notifyerror "a requirement"
 
 echo "Installing R environment..."
 Rscript renv/restore.R >>$LOG_FILE 2>&1
