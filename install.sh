@@ -1,18 +1,10 @@
-#!/usr/bin/env -S sh
+#!/bin/bash
 
 LOG_FILE="install.log"
 REQS_FILE="artaf-python/requirements.txt"
 VENV_DIR="venv"
 
-if [[ "$OSTYPE" == "cygwin" || "$OSTYPE" == "msys" ]] ; then
-    python_command() { 
-        python $@ 
-    }
-else
-    python_command() { 
-        python3 $@ 
-    }
-fi
+. ./pythoncheck.sh
 
 echo "" > $LOG_FILE
 
@@ -24,7 +16,7 @@ if [[ -d "./$VENV_DIR" ]]; then
         rm -r $VENV_DIR && echo "Deleted old Python virtual environment in '$VENV_DIR' directory" > $LOG_FILE
         python_command -m venv $VENV_DIR && echo "Created new Python virtual environment in '$VENV_DIR' directory" >> $LOG_FILE
     fi
-else 
+else
     python_command -m venv $VENV_DIR && echo "Created new Python virtual environment in '$VENV_DIR' directory" > $LOG_FILE
 fi
 

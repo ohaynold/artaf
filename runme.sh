@@ -5,21 +5,12 @@
 #
 # To run on a tiny dataset for testing, pass command line arguments --config tiny_data
 
-if [[ "$OSTYPE" == "cygwin" || "$OSTYPE" == "msys" ]] ; then
-    python_command() { 
-        python $@ 
-    }
-else
-    python_command() { 
-        python3 $@ 
-    }
-fi
-
+. ./pythoncheck.sh
 . ./activatevenv.sh
 if [[ $VIRTUAL_ENV_PROMPT != "venv" ]]; then
     answer="a"
     while [[ "YyNn" != *"$answer"* ]] ; do
-        read -p "No Python virtual environment loaded, try running install.sh first. Continue anyway? [yN]: " answer
+        read -p "No Python virtual environment loaded, try running install.sh first. Continue anyway? [y/N]: " answer
         answer=${answer:-N}
 
         if [[ "Nn" == *"$answer"* ]]; then
