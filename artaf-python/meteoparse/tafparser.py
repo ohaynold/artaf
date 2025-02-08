@@ -28,7 +28,7 @@ ParsedForecast = collections.namedtuple(
 
 WeatherConditions = collections.namedtuple(
     "WeatherConditions",
-    ["wind_speed", "wind_gust", "cloud_layers"])
+    ["wind_speed", "wind_gust"])
 
 FromLine = collections.namedtuple(
     "FromLine",
@@ -125,8 +125,7 @@ class TafTreeTransformer(lark.Transformer):
         cloud_layers_group = from_conditions.clouds['cloud_layer']
         # TODO: I imagine this has to change, now that the clouds() method gets auto-called by lark.
         # TODO: I have no idea how the pieces all fit together though.
-        return WeatherConditions(wind_speed=wind_speed, wind_gust=wind_gust,
-                                 cloud_layers=cloud_layers_group)
+        return WeatherConditions(wind_speed=wind_speed, wind_gust=wind_gust)
         # TODO: Unroll TEMPO and PROB changes
         # TODO: Add other elements of group
 
@@ -169,16 +168,18 @@ class TafTreeTransformer(lark.Transformer):
             return token.update(value=AmendmentType.AMENDED)
         return IndexError("Unknown amendment type.")
 
+'''
     def clouds(self, branches):
         """Produces a list of cloud-shaped objects"""
         cloud_layers = TreeAccessor(branches)
         cloud_layers_list = []
-        cloud_vv = cloud_layers['clouds_vertical_visibility']
-        cloud_skc = cloud_layers['CLOUDS_SKY_CLEAR']
 
-        if len(cloud_skc) > 0:
-            cloud_layers_list.append(CloudLayer(0, CloudCoverage("SKC"), False))
-        elif len(cloud_vv) > 0:
+        if hasattr(cloud_layers, "CLOUDS_SKY_CLEAR"):
+            cloud_layers_list.append(CloudLayer(
+                0,
+                CloudCoverage("SKC"),
+                False))
+        elif hasattr(cloud_layers, "clouds_vertical_visibility"):
             cloud_layers_list.append(CloudLayer(
                 int(cloud_vv[0].CLOUDS_ALTITUDE.value) * 100,
                 CloudCoverage("VV"),
@@ -250,7 +251,7 @@ class CloudCoverage:
                 # that makes more sense to represent a VV condition.
                 return 1.1
 
-
+'''
 
 # Was disabled above to allow for Lark transformer method names
 # pragma pylint: enable=invalid-name
