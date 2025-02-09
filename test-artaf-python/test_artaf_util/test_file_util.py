@@ -63,10 +63,10 @@ class TestSafeOpenWrite:
             temp_file_name = os.path.join(temp_dir, "testfile.txt")
             with pytest.raises(IOError):
                 with  artaf_util.safe_open_write(temp_file_name, "r", encoding="ascii") as in_file:
-                    in_file.read()
+                    in_file.read()  # pragma: no cover
 
 
-class TestOpenCompressedZipWrite:
+class TestOpenCompressedZipWrite: # pylint: disable=too-few-public-methods
     """Test artaf_util.pen_compressed_text_zip_write"""
 
     def test_open_compressed_zip_write(self):
