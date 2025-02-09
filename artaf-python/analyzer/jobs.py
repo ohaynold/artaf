@@ -23,6 +23,9 @@ def get_wind_speed(hourly_item):
     "Extract wind speed"
     return hourly_item.conditions.wind_speed
 
+def get_lowest_cloud_altitude(hourly_item):
+    "Extract altitude of lowest cloud layers, independent of coverage"
+    return hourly_item.conditions.clouds[0].coverage_altitude
 
 DEFAULT_JOBS = [HourlyHistogramJob(name="YearlyStations",
                                    ascending_group_by={
@@ -31,6 +34,7 @@ DEFAULT_JOBS = [HourlyHistogramJob(name="YearlyStations",
                                    },
                                    other_group_by={},
                                    values={
-                                       "wind_speed": get_wind_speed
+                                       "wind_speed": get_wind_speed,
+                                       "lowest_cloud_altitude": get_lowest_cloud_altitude
                                    }
                                    )]
