@@ -109,7 +109,7 @@ class HourlyHistogramKeeper:  # pylint: disable=too-many-instance-attributes
 
         if ascending_group != self.current_ascending_group:
             if len(self.counts) > 0:
-                self.counts = dict(sorted(list(self.counts.items()), key=lambda x: x[0]))
+                self.counts = dict(sorted(list(self.counts.items()), key=lambda x: str(x[0])))
                 self.callback(ascending_group, self.counts, self.callback_info)
             self.current_ascending_group = ascending_group
             self.counts = {}

@@ -34,6 +34,22 @@ def get_wind_gust_spread(hourly_item):
     return hourly_item.conditions.wind.speed_with_gust - hourly_item.conditions.wind.speed
 
 
+def get_wind_north(hourly_item):
+    "Extract the northerly wind component, rounded to an integer"
+    north, _ = hourly_item.conditions.wind.cartesian()
+    if north is None:
+        return ""
+    return int(round(north, 0))
+
+
+def get_wind_east(hourly_item):
+    "Extract the northerly wind component, rounded to an integer"
+    _, east = hourly_item.conditions.wind.cartesian()
+    if east is None:
+        return ""
+    return int(round(east, 0))
+
+
 def get_clouds_lowest_base(hourly_item):
     "Extract altitude of lowest cloud layers, independent of coverage"
     lowest_layer = hourly_item.conditions.clouds[0]
@@ -69,6 +85,8 @@ DEFAULT_JOBS = [HourlyHistogramJob(name="YearlyStations",
                                        "wind_speed": get_wind_speed,
                                        "wind_speed_with_gust": get_wind_speed_with_gust,
                                        "wind_gust_spread": get_wind_gust_spread,
+                                       "wind_north": get_wind_north,
+                                       "wind_east": get_wind_east,
                                        "clouds_lowest_base": get_clouds_lowest_base,
                                        "clouds_ceiling": get_clouds_ceiling,
                                        "visibility": get_visibility

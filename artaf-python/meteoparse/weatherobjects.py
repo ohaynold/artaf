@@ -1,5 +1,7 @@
 """Objects for convenient representations of weather phenomena"""
 
+import math
+
 
 class CloudLayer:
     """
@@ -114,3 +116,13 @@ class Wind:
     def speed_with_gust(self):
         "Give the wind speed including gusts, if any"
         return self.gust if self.gust is not None else self.speed
+
+    def cartesian(self, with_gust=False):
+        """Gives the wind in cartesian coordinates"""
+        if self.direction is None:
+            return (None, None)
+        speed = self.speed_with_gust if with_gust else self.speed
+        direction_radians = math.radians(self.direction)
+        north = speed * math.cos(direction_radians)
+        east = speed * math.sin(direction_radians)
+        return north, east
