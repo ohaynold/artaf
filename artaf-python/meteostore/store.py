@@ -28,12 +28,14 @@ def cleanup_datetime(d):
             raise AttributeError("I need at least a date with year, month, day.")
     if hasattr(d, "tzinfo") and d.tzinfo is not None:
         raise ValueError("I need a naive UTC date without timezone information.")
-    if hasattr(a, "hour"):
+    if hasattr(d, "hour"):
         return datetime.datetime(d.year, d.month, d.day, d.hour, d.minute)
     return datetime.datetime(d.year, d.month, d.day)
 
 
-def get_iowa_state_nws_archive(pil, start_time, end_time, center=None, fmt="text"):
+# No unit testing since the one major risk is a change in the Web service itself
+def get_iowa_state_nws_archive(pil, start_time, end_time, center=None,
+                               fmt="text"):  # pragma: no cover
     """
     Download a NWS weather product from the Iowa Environmental Mesonet archive at Iowa State.
     :param pil: NWS PIL
@@ -93,8 +95,11 @@ def ensure_stations_years_sane(stations, from_year, to_year):
     return station_codes, from_year, to_year
 
 
+# No coverage testing since the main risk is changes in the Web service itself and we don't
+# want to make permanent requests for testing
 def _prepare_taf_download(  # pylint: disable=too-many-arguments,too-many-positional-arguments
-        station_codes, file_path, tmp_dir_path, tmp_file_path, force_refresh, read_only):
+        station_codes, file_path, tmp_dir_path, tmp_file_path, force_refresh,
+        read_only):  # pragma: no cover
     """A helper function for download_tafs() to recover from a possible previous failed download
     and to create and clean up the directory structure"""
     if force_refresh and read_only:
@@ -128,7 +133,9 @@ def _prepare_taf_download(  # pylint: disable=too-many-arguments,too-many-positi
     return False
 
 
-def _finish_download(year, file_path, tmp_dir_path, tmp_file_path):
+# No coverage testing since the main risk is changes in the Web service itself and we don't
+# want to make permanent requests for testing
+def _finish_download(year, file_path, tmp_dir_path, tmp_file_path):  # pragma: no cover
     """A helper function for download_tafs() to package up downloaded data and clean up after
     itself"""
     # Now we collect the temporary directory into a ZIP file -- normally we don't compress
@@ -147,8 +154,11 @@ def _finish_download(year, file_path, tmp_dir_path, tmp_file_path):
     os.rmdir(tmp_dir_path)
 
 
-def download_tafs( # pylint: disable=too-many-locals
-        stations, from_year, to_year, force_refresh=False, read_only=False):
+# No coverage testing since the main risk is changes in the Web service itself and we don't
+# want to make permanent requests for testing
+def download_tafs(  # pylint: disable=too-many-locals
+        stations, from_year, to_year, force_refresh=False,
+        read_only=False):  # pragma: no cover
     """
     Download all TAFs not yet loaded into our data cache.
     :param stations: List of stations as StationDesc tuples
