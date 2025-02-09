@@ -146,10 +146,66 @@ print(
     geom_boxplot(outliers = FALSE) +
     theme_bw() +
     labs(x="Change in predicted wind speed",
-         y="Error in predicted wind speed") +
+         y="Change from prediction to final value") +
     geom_abline(slope=-1, intercept=31, linetype=4) +
     scale_x_discrete(breaks=c(-30,-25,-20,-15,-10,-5,0,5,10,15,20,25,30)) + 
     facet_wrap(~year)
+)
+```
+
+## Visibility
+
+Visibility is another prominent feature of TAFs. Looking at the autocorrelations
+of predictions, again we see a striking assymmetry. Predicted improvements tend
+to come true, but predicted worsened visibility tends to be pessimistic.
+
+```{r, warning=FALSE}
+plotdat <- lines %>%
+  filter(variable=="visibility") %>%
+  mutate(previous=pmin(previous, 6), current=pmin(current, 6), final=pmin(final, 6)) %>%
+  mutate(change_from_previous=round(current-previous, digits=0), change_to_final=round(final-current, digits = 0)) %>%
+  group_by(change_from_previous, change_to_final) %>%
+  summarise(count=sum(count), .groups="drop")
+
+print(
+  ggplot(plotdat, aes(x=as.factor(change_from_previous), y=change_to_final, weight=count)) +
+    geom_boxplot() +
+    theme_bw() +
+    labs(
+      title="Changes in predicted visibility vs. realization",
+      x="Change in predicted visibility",
+         y="Change from prediction to final value")  +
+    geom_abline(slope=-1, intercept=7, linetype=4) # +
+    # scale_x_discrete(breaks=c(--5, 0, 5))
+    )
+```
+
+## Ceiling
+
+Looking at changes in the prediction of ceilings, we don't see a pattern as obvious
+as for wind or visibility. On the median, such changes usually do not come true,
+for better or for worse. However, changes in the prediction for better or for worse
+are highly indicative of the forecast being uncertain.
+
+```{r}
+plotdat <- lines %>%
+  filter(variable=="clouds_ceiling") %>%
+  mutate(previous=round(previous/1000, 0), current=round(current/1000, 0), final=round(final/1000, 0)) %>%
+  filter(current<=10) %>%
+  mutate(change_from_previous=current-previous, change_to_final=final-current) %>%
+  group_by(change_from_previous, change_to_final) %>%
+  summarise(count=sum(count), .groups = "drop") %>%
+  mutate(increase=pmax(change_from_previous,0), decrease=pmin(change_from_previous, 0)) %>%
+  ungroup()
+
+print(
+  ggplot(plotdat, aes(x=as.factor(change_from_previous), y=change_to_final, weight=count)) +
+    geom_boxplot(outliers = FALSE) +
+    theme_bw() +
+    labs(x="Change in predicted ceiling (K ft)",
+         y="Change from prediction to final value") +
+    # geom_abline(slope=-1, intercept=31, linetype=4) +
+    scale_x_discrete(breaks=c(-15, -10, -5, 0, 5, 10)) 
 )
 ```
 

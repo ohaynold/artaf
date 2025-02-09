@@ -41,3 +41,22 @@ Repeating the analysis by year, we see that the pattern appears largely
 unchanged.
 
 ![](Statistics_files/figure-markdown_github/unnamed-chunk-5-1.png)
+
+## Visibility
+
+Visibility is another prominent feature of TAFs. Looking at the
+autocorrelations of predictions, again we see a striking assymmetry.
+Predicted improvements tend to come true, but predicted worsened
+visibility tends to be pessimistic.
+
+![](Statistics_files/figure-markdown_github/unnamed-chunk-6-1.png)
+
+## Ceiling
+
+Looking at changes in the prediction of ceilings, we don’t see a pattern
+as obvious as for wind or visibility. On the median, such changes
+usually do not come true, for better or for worse. However, changes in
+the prediction for better or for worse are highly indicative of the
+forecast being uncertain.
+
+![](Statistics_files/figure-markdown_github/unnamed-chunk-7-1.png)
