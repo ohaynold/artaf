@@ -191,7 +191,6 @@ are highly indicative of the forecast being uncertain.
 plotdat <- lines %>%
   filter(variable=="clouds_ceiling") %>%
   mutate(previous=round(previous/1000, 0), current=round(current/1000, 0), final=round(final/1000, 0)) %>%
-  filter(current<=10) %>%
   mutate(change_from_previous=current-previous, change_to_final=final-current) %>%
   group_by(change_from_previous, change_to_final) %>%
   summarise(count=sum(count), .groups = "drop") %>%
@@ -208,6 +207,29 @@ print(
     scale_x_discrete(breaks=c(-15, -10, -5, 0, 5, 10)) 
 )
 ```
+However, changes in ceiling do not mean the same thing when the predicted ceiling is 100 ft vs. 12,000 ft. If we break it down
+by currently predicted ceiling rounded to the nearest 1000 ft, a pattern begins to emerge for intermediate predictions: Here improvements tend to be optimistic, but worsening predictions tend to come true.
 
+```{r, warning=FALSE}
+plotdat <- lines %>%
+  filter(variable=="clouds_ceiling") %>%
+  mutate(previous=round(previous/1000, 0), current=round(current/1000, 0), final=round(final/1000, 0)) %>%
+  mutate(change_from_previous=current-previous, change_to_final=final-current) %>%
+  group_by(current, change_from_previous, change_to_final) %>%
+  summarise(count=sum(count), .groups = "drop") %>%
+  mutate(increase=pmax(change_from_previous,0), decrease=pmin(change_from_previous, 0)) %>%
+  ungroup()
+
+print(
+  ggplot(plotdat, aes(x=as.factor(change_from_previous), y=change_to_final, weight=count)) +
+    geom_boxplot(outliers = FALSE) +
+    theme_bw() +
+    labs(x="Change in predicted ceiling (K ft)",
+         y="Change from prediction to final value") +
+    # geom_abline(slope=-1, intercept=31, linetype=4) +
+    scale_x_discrete(breaks=c(-15, -10, -5, 0, 5, 10)) +
+    facet_wrap(~pmin(current, 11))
+)
+```
 
 
