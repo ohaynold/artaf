@@ -100,3 +100,16 @@ class TestParseTafsClouds:
             assert str(layer.coverage) == cloud_string[:3]
             assert float(layer.coverage) == coverage
             assert not layer.is_cumulonimbus
+
+    def test_clouds_invalid_coverage(self):
+        """A nonsense cloud coverage type should fail"""
+        parsed = parse_oneliner_taf("09005KT P6SM INV005")
+        assert isinstance(parsed, meteoparse.tafparser.TafParseError)
+
+    def test_clouds_invalid_order(self):
+        """Cloud layers in non-ascending order should fail"""
+        # Make sure it works in the correct order
+        parsed_correct = parse_oneliner_taf("09005KT P6SM BKN010 FEW020 OVC030")
+        assert parsed_correct.from_lines[0].conditions.clouds[0].cloud_base == 1000
+        parsed_incorrect = parse_oneliner_taf("09005KT P6SM BKN010 OVC030 FEW020")
+        assert isinstance(parsed_incorrect, meteoparse.tafparser.TafParseError)

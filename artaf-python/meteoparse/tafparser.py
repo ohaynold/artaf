@@ -120,7 +120,10 @@ class TafTreeTransformer(lark.Transformer):
         from_conditions = TreeAccessor(branches).from_conditions
         wind = from_conditions.WIND_GROUP.value
         visibility = from_conditions.VISIBILITY_GROUP.value
-        cloud_layers_group = from_conditions['clouds'][0].children
+        cloud_layers_group = from_conditions.clouds.children
+        if len(cloud_layers_group) > 1:
+            for i in range(len(cloud_layers_group)-1):
+                assert cloud_layers_group[i].cloud_base <= cloud_layers_group[i+1].cloud_base
 
         # See the clouds work beautifully by uncommenting these lines
         # for cloud_layer in cloud_layers_group:
@@ -159,6 +162,7 @@ class TafTreeTransformer(lark.Transformer):
             enumerator, denominator = tuple(fraction_text.split("/"))
             visibility_miles += int(enumerator) / int(denominator)
         return lark.Token("VISIBILITY_RANGE", visibility_miles)
+
 
     def clouds_vertical_visibility(self, token):
         """Parses as VV group as a CloudLayer"""
