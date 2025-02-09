@@ -8,18 +8,6 @@ VENV_DIR="venv"
 
 echo "" > $LOG_FILE
 
-if [[ -d "./$VENV_DIR" ]]; then
-    read -r -p 'A Python virtual environment exists; delete it and start fresh? [Y/n] ' answer
-    answer=${answer:-Y}
-
-    if [[ $answer == "Y" || $answer == "y" ]]; then
-        rm -r $VENV_DIR && echo "Deleted old Python virtual environment in '$VENV_DIR' directory" > $LOG_FILE
-        python_command -m venv $VENV_DIR && echo "Created new Python virtual environment in '$VENV_DIR' directory" >> $LOG_FILE
-    fi
-else
-    python_command -m venv $VENV_DIR && echo "Created new Python virtual environment in '$VENV_DIR' directory" > $LOG_FILE
-fi
-
 . ./activatevenv.sh
 
 notifyerror(){
