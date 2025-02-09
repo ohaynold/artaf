@@ -103,8 +103,8 @@ class TafTreeTransformer(lark.Transformer):
             valid_from=valid_from,
             valid_until=valid_until,
             amendment=header.HEADER_AMENDMENT.value
-                      if hasattr(header, "HEADER_AMENDMENT") else
-                      None,
+            if hasattr(header, "HEADER_AMENDMENT") else
+            None,
             from_lines=new_from_lines)
 
         return res
@@ -126,10 +126,11 @@ class TafTreeTransformer(lark.Transformer):
         cloud_layers_group = from_conditions['clouds'][0].children
 
         # See the clouds work beautifully by uncommenting these lines
-        #for cloud_layer in cloud_layers_group:
+        # for cloud_layer in cloud_layers_group:
         #    print(cloud_layer)
 
-        return WeatherConditions(wind_speed=wind_speed, wind_gust=wind_gust,clouds=cloud_layers_group)
+        return WeatherConditions(wind_speed=wind_speed, wind_gust=wind_gust,
+                                 clouds=cloud_layers_group)
         # TODO: Unroll TEMPO and PROB changes
         # TODO: Add other elements of group
 
@@ -172,11 +173,13 @@ class TafTreeTransformer(lark.Transformer):
             return token.update(value=AmendmentType.AMENDED)
         return IndexError("Unknown amendment type.")
 
-    def CLOUDS_SKY_CLEAR(self, token):
+    # We don't need to parse the clear sky token as it can only carry one value
+    def CLOUDS_SKY_CLEAR(self, token):  # pylint: disable=unused-argument
         """Cloud layer with sky clear"""
         return CloudLayer(None, CloudCoverage("SKC"), False)
 
     def clouds_vertical_visibility(self, token):
+        """Parses as VV group as a CloudLayer"""
         return CloudLayer(
             int(token[0].value) * 100,
             CloudCoverage("VV"),
@@ -197,11 +200,13 @@ class TafTreeTransformer(lark.Transformer):
 
         return cloud_layer_obj
 
+
 class CloudLayer:
     """
     Represents the cloud layer with altitude in feet, cloud coverage as a
     CloudCoverage object, and whether the cloud is cumulonimbus as a boolean.
     """
+
     def __init__(self, altitude, coverage, cb):
         self.cloud_base = altitude
 
@@ -217,7 +222,8 @@ class CloudLayer:
 
     def __str__(self):
         human_readable_altitude = f"{self.cloud_base} feet" if self.cloud_base != 0 else ""
-        return (f"{self.coverage.in_english()} {human_readable_altitude}{', cumulonimbus' if self.is_cumulonimbus() else ''}")
+        return (f"{self.coverage.in_english()} {human_readable_altitude}"
+                f"{', cumulonimbus' if self.is_cumulonimbus() else ''}")
 
     @property
     def is_sky_clear(self):
@@ -237,18 +243,18 @@ class CloudCoverage:
     def __float__(self):
         # Definitions in AC 00-45H, section 5.11.2.9.1
         if self.coverage_string == "SKC":
-            coverage_float = 0.0 # exactly no clouds -- the slightest whiff is FEW
+            coverage_float = 0.0  # exactly no clouds -- the slightest whiff is FEW
         elif self.coverage_string == "FEW":
-            coverage_float = 0.125 # 0 - 2 oktas
+            coverage_float = 0.125  # 0 - 2 oktas
         elif self.coverage_string == "SCT":
-            coverage_float = .375 # 3 - 4 oktas
+            coverage_float = .375  # 3 - 4 oktas
         elif self.coverage_string == "BKN":
-            coverage_float = .6875 #  5- 7 oktas
+            coverage_float = .6875  # 5- 7 oktas
         elif self.coverage_string == "OVC":
-            coverage_float = 0.9375 # 7-8 oktas
-                                    # there is no encoding parallelling SKC for exactly 100%
+            coverage_float = 0.9375  # 7-8 oktas
+            # there is no encoding parallelling SKC for exactly 100%
         elif self.coverage_string == "VV":
-            coverage_float = 1.0 # Sky not visible anywhere
+            coverage_float = 1.0  # Sky not visible anywhere
         else:
             raise ValueError(f"Unexpected type of cloud coverage: '{self.coverage_string}'")
 
