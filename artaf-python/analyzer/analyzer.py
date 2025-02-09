@@ -269,7 +269,6 @@ class HourlyHistogramProcessor:  # pylint: disable=too-many-instance-attributes
         parsed_tafs = meteoparse.parse_tafs(station_tafs)
         expanded_tafs = meteoparse.regularize_tafs(parsed_tafs)
         arranged_forecasts = arrange_by_hour_forecast(expanded_tafs, station.station)
-        station_processed_hours = 0
         station_processed_hours_total = 0
         station_processed_errors = 0
         keepers = [HourlyHistogramKeeper(
@@ -278,12 +277,10 @@ class HourlyHistogramProcessor:  # pylint: disable=too-many-instance-attributes
             if isinstance(hourly_data, HourlyGroup):
                 for k in keepers:
                     k.process_hourly_group(hourly_data)
-                station_processed_hours += 1
                 station_processed_hours_total += 1
-                if station_processed_hours % context.show_progress_after == 0:
-                    context.progress(station_processed_hours, station_processed_errors)
+                if station_processed_hours_total % context.show_progress_after == 0:
+                    context.progress(context.show_progress_after, station_processed_errors)
                     station_processed_errors = 0
-                    station_processed_hours = 0
                 if (context._abort_after is not None  # pylint: disable=protected-access
                         and station_processed_hours_total ==
                         context._abort_after):  # pylint: disable=protected-access
@@ -296,7 +293,8 @@ class HourlyHistogramProcessor:  # pylint: disable=too-many-instance-attributes
                 raise TypeError("Unexpected message type encountered.")
         for k in keepers:
             k.flush()
-        context.progress(station_processed_hours, station_processed_errors)
+        context.progress(station_processed_hours_total % context.show_progress_after,
+                         station_processed_errors)
 
 
 if __name__ == "__main__":
