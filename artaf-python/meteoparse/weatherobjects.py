@@ -1,3 +1,5 @@
+"""Objects for convenient representations of weather phenomena"""
+
 
 class CloudLayer:
     """
@@ -75,3 +77,14 @@ class CloudCoverage:
             english_string = "Vertical visibility"
         return english_string
 
+
+class Visibility:  # pylint: disable=too-few-public-methods
+    """A visibility in statute miles. is_excess indicates that the visibility is higher than
+    the number given."""
+
+    def __init__(self, visibility_miles, is_excess):
+        self.visibility_miles = float(visibility_miles)
+        self.is_excess = bool(is_excess)
+
+    def __float__(self):
+        return self.visibility_miles

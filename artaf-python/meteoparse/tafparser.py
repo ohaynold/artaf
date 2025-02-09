@@ -13,7 +13,7 @@ import lark
 
 import meteostore
 from meteoparse.tree_accessor import TreeAccessor
-from meteoparse.weatherobjects import CloudLayer, CloudCoverage
+from meteoparse.weatherobjects import CloudLayer, CloudCoverage, Visibility
 
 
 class AmendmentType(Enum):
@@ -29,7 +29,7 @@ ParsedForecast = collections.namedtuple(
 
 WeatherConditions = collections.namedtuple(
     "WeatherConditions",
-    ["wind_speed", "wind_gust", "clouds"])
+    ["wind_speed", "wind_gust", "visibility", "clouds"])
 
 FromLine = collections.namedtuple(
     "FromLine",
@@ -123,6 +123,7 @@ class TafTreeTransformer(lark.Transformer):
         wind_gust = wind_group.wind_gust_group.WIND_SPEED.value \
             if hasattr(wind_group, "wind_gust_group") \
             else None
+        visibility = from_conditions.VISIBILITY_GROUP.value
 
         cloud_layers_group = from_conditions['clouds'][0].children
 
@@ -131,9 +132,29 @@ class TafTreeTransformer(lark.Transformer):
         #    print(cloud_layer)
 
         return WeatherConditions(wind_speed=wind_speed, wind_gust=wind_gust,
-                                 clouds=cloud_layers_group)
+                                 clouds=cloud_layers_group, visibility=visibility)
         # TODO: Unroll TEMPO and PROB changes
-        # TODO: Add other elements of group
+
+    def visibility_group(self, branches):
+        """Parse visibility group. The visibility in statute miles may have integral and
+        fractional components, and it may be marked as exceeding 6 miles."""
+        elements = TreeAccessor(branches)
+        return lark.Token("VISIBILITY_GROUP",
+                          Visibility(elements.VISIBILITY_RANGE.value,
+                                     hasattr(elements, "VISIBILITY_EXCEEDING")))
+
+    def visibility_range(self, token):
+        """Parse a visibility range in statute miles"""
+        elements = TreeAccessor(token)
+        if hasattr(elements, "VISIBILITY_MILES"):
+            visibility_miles = int(elements.VISIBILITY_MILES)
+        else:
+            visibility_miles = 0
+        if hasattr(elements, "VISIBILITY_FRACTION"):
+            fraction_text = elements.VISIBILITY_FRACTION.value
+            enumerator, denominator = tuple(fraction_text.split("/"))
+            visibility_miles += int(enumerator) / int(denominator)
+        return lark.Token("VISIBILITY_RANGE", visibility_miles)
 
     def WIND_SPEED(self, token):
         """Wind speed as an integer in knots"""
@@ -237,6 +258,8 @@ def parse_taf(message_time, message):
         return TafParseError(e, message, hint)
 
 
+# This serves to memoize the one instance of the parser we're creating and will be initialized
+# in the first call to parse_tafs()
 parse_taf.parser = None
 
 
