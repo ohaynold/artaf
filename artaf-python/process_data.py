@@ -31,10 +31,10 @@ def get_config(config_name):
 
 RunConfig = collections.namedtuple(
     "RunConfig",
-["stations", "year_from", "year_to", "config_name", "parallel"])
+    ["stations", "year_from", "year_to", "config_name", "parallel"])
 
 
-def process_arguments():
+def process_arguments():  # pragma: no cover
     """
     Process command line arguments and load the appropriate configuration to run
     :return: List of aerodromes, year to start with, year to end with
@@ -57,7 +57,7 @@ def process_arguments():
                      config_name=config_name, parallel=parallel)
 
 
-def process_data():
+def process_data():  # pragma: no cover
     """
     Execute everything in the right order.
     """
