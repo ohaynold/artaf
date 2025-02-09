@@ -14,22 +14,25 @@ class TestHourlyHistogramProcessor: # pylint: disable=too-few-public-methods
         """Really more of an integration test for the parallel processing mechanism.
         Make sure that results are identical when processed in parallel and in one thread."""
         stations = [s for s in meteostore.get_station_list() if s.station == "KENW"]
+        year = 2023
+        read_records = 1000
+        meteostore.download_tafs(stations, year, year)
         with make_temp_directory() as temp_directory:
             # Process in a single thread
             flat_temp_directory = os.path.join(temp_directory, "flat")
             processor_flat = analyzer.analyzer.HourlyHistogramProcessor(
                 analyzer.jobs.DEFAULT_JOBS, flat_temp_directory, parallel=False)
-            processor_flat.show_progress_after = 1000
-            processor_flat._abort_after = 1001  # pylint: disable=protected-access
-            processor_flat.process(stations, 2024, 2024)
+            processor_flat.show_progress_after = read_records
+            processor_flat._abort_after = read_records + 1  # pylint: disable=protected-access
+            processor_flat.process(stations, year, year)
 
             # Process parallel
             parallel_temp_directory = os.path.join(temp_directory, "parallel")
             processor_parallel = analyzer.analyzer.HourlyHistogramProcessor(
                 analyzer.jobs.DEFAULT_JOBS, parallel_temp_directory, parallel=True)
-            processor_parallel.show_progress_after = 1000
-            processor_parallel._abort_after = 1001  # pylint: disable=protected-access
-            processor_parallel.process(stations, 2024, 2024)
+            processor_parallel.show_progress_after = read_records
+            processor_parallel._abort_after = read_records + 1  # pylint: disable=protected-access
+            processor_parallel.process(stations, year, year)
 
             # Ensure that records are identical other than order of lines
             with (zipfile.ZipFile(os.path.join(flat_temp_directory, "hist YearlyStations.csv.zip"),
