@@ -60,6 +60,7 @@ the prediction for better or for worse are highly indicative of the
 forecast being uncertain.
 
 ![](Statistics_files/figure-markdown_github/unnamed-chunk-7-1.png)
+
 However, changes in ceiling do not mean the same thing when the
 predicted ceiling is 100 ft vs. 12,000 ft. If we break it down by
 currently predicted ceiling rounded to the nearest 1000 ft, a pattern
