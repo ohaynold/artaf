@@ -111,6 +111,15 @@ class TestRegularizeTafs:
             # See that wind is as we set it in the TAF -- 3 is now still at 5 knots
             assert regularized[0].from_lines[i].conditions.wind.speed == (5 if i <= 3 else 10)
 
+    def test_regularize_tafs_non_contiguous(self):
+        """Test non-contiguous lines"""
+        parsed_tafs = list(meteoparse.parse_tafs(TEST_TAFS_NORMAL))
+        # Sneak in a non-contiguous time
+        parsed_tafs[0].from_lines[1] = parsed_tafs[0].from_lines[1]._replace(
+            valid_from=parsed_tafs[0].from_lines[1].valid_from + datetime.timedelta(seconds=60 * 5))
+        regularized = list(meteoparse.regularize_tafs(parsed_tafs))
+        assert isinstance(regularized[0], meteoparse.TafParseError)
+
     def test_regularize_tafs_nil(self):
         """Test a TAF with no content"""
         parsed_tafs = meteoparse.parse_tafs(TEST_TAFS_NIL)
