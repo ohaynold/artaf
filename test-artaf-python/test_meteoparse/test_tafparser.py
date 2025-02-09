@@ -39,6 +39,7 @@ class TestParseTafsClouds:
         layer = parsed.from_lines[0].conditions.clouds[0]
         assert layer.is_sky_clear
         assert layer.cloud_base is None
+        assert str(layer.coverage) == "SKC"
         assert float(layer.coverage) == 0.0
         assert not layer.is_cumulonimbus
 
@@ -49,6 +50,7 @@ class TestParseTafsClouds:
         layer = parsed.from_lines[0].conditions.clouds[0]
         assert not layer.is_sky_clear
         assert layer.cloud_base == 500
+        assert str(layer.coverage) == "VV"
         assert float(layer.coverage) == 1.0
         assert not layer.is_cumulonimbus
 
@@ -65,6 +67,7 @@ class TestParseTafsClouds:
             layer = parsed.from_lines[0].conditions.clouds[0]
             assert not layer.is_sky_clear
             assert layer.cloud_base == base
+            assert str(layer.coverage) == message[:3]
             assert float(layer.coverage) == coverage
             assert not layer.is_cumulonimbus
 
@@ -75,6 +78,7 @@ class TestParseTafsClouds:
         layer = parsed.from_lines[0].conditions.clouds[0]
         assert not layer.is_sky_clear
         assert layer.cloud_base == 5000
+        assert str(layer.coverage) == "BKN"
         assert float(layer.coverage) == 0.6875
         assert layer.is_cumulonimbus
 
@@ -89,8 +93,10 @@ class TestParseTafsClouds:
         message = "09005KT P6SM  " + (" ".join([m for m, _, _ in test_clouds]))
         parsed = parse_oneliner_taf(message)
         assert len(parsed.from_lines[0].conditions.clouds) == len(test_clouds)
-        for layer, (_, base, coverage) in zip(parsed.from_lines[0].conditions.clouds, test_clouds):
+        for layer, (cloud_string, base, coverage) in \
+                zip(parsed.from_lines[0].conditions.clouds, test_clouds):
             assert not layer.is_sky_clear
             assert layer.cloud_base == base
+            assert str(layer.coverage) == cloud_string[:3]
             assert float(layer.coverage) == coverage
             assert not layer.is_cumulonimbus
