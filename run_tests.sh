@@ -20,3 +20,4 @@ fi
 
 export PYTHONPATH=artaf-python:test-artaf-python:$PYTHONPATH
 coverage run -m pytest
+coverage html

@@ -18,4 +18,4 @@ notifyerror(){
 echo "Installing required packages:" && awk -F "==" '{print "    "$1}' $TEST_REQS_FILE
 [[ $(pip install -r $TEST_REQS_FILE --log $LOG_FILE) ]] || notifyerror "a requirement"
 
-echo "Done! To run the program, run runme.sh"
+echo "Done! To run the tests, run run_tests.sh"
