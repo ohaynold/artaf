@@ -34,6 +34,16 @@ def get_lowest_cloud_altitude(hourly_item):
     return min(lowest_layer.cloud_base, max_altitude)
 
 
+def get_ceiling(hourly_item):
+    "Extract altitude of lowest cloud layer with more than 50% coverage"
+    ceiling_layers = [c for c in hourly_item.conditions.clouds if float(c.coverage) >= 0.5]
+    # the highest cloud altitude we care about
+    max_altitude = 18_000
+    if not ceiling_layers:
+        return max_altitude
+    return min(ceiling_layers[0].cloud_base, max_altitude)
+
+
 DEFAULT_JOBS = [HourlyHistogramJob(name="YearlyStations",
                                    ascending_group_by={
                                        "aerodrome": get_aerodrome,
@@ -42,6 +52,7 @@ DEFAULT_JOBS = [HourlyHistogramJob(name="YearlyStations",
                                    other_group_by={},
                                    values={
                                        "wind_speed": get_wind_speed,
-                                       "lowest_cloud_altitude": get_lowest_cloud_altitude
+                                       "lowest_cloud_altitude": get_lowest_cloud_altitude,
+                                       "ceiling": get_ceiling,
                                    }
                                    )]
