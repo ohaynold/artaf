@@ -137,9 +137,11 @@ class ParallelContext:
     """This is a placeholder class for HourlyHistogramProcessor that can get pickled and passed
     to different processes in parallel processing."""
 
-    def __init__(self, jobs, output_queue):
+    def __init__(self, jobs, output_queue, show_progress_after, abort_after):
         self.output_queue = output_queue
         self.jobs = jobs
+        self.show_progress_after = show_progress_after
+        self._abort_after = abort_after
 
     def receive_output(self, ascending_group, counts, job_index):
         """Remote access to HourlyHistogramProcessor.receive_output"""
@@ -177,6 +179,8 @@ class HourlyHistogramProcessor:  # pylint: disable=too-many-instance-attributes
         self.progress_callback = progress_callback
         self.output_queue = None
         self.parallel = parallel
+        self._abort_after = None
+        self.show_progress_after = 10_000
 
     def process(self, stations, year_from, year_to):
         """
@@ -198,7 +202,8 @@ class HourlyHistogramProcessor:  # pylint: disable=too-many-instance-attributes
                 with (concurrent.futures.ProcessPoolExecutor() as executor,
                       multiprocessing.Manager() as manager):
                     self.output_queue = manager.Queue()
-                    context = ParallelContext(self.jobs, self.output_queue)
+                    context = ParallelContext(self.jobs, self.output_queue,
+                                              self.show_progress_after, self._abort_after)
                     futures = [executor.submit(self._process_station, e, context) for e in
                                evaluations]
                     while True:
@@ -265,6 +270,7 @@ class HourlyHistogramProcessor:  # pylint: disable=too-many-instance-attributes
         expanded_tafs = meteoparse.regularize_tafs(parsed_tafs)
         arranged_forecasts = arrange_by_hour_forecast(expanded_tafs, station.station)
         station_processed_hours = 0
+        station_processed_hours_total = 0
         station_processed_errors = 0
         keepers = [HourlyHistogramKeeper(
             context.jobs[i], context.receive_output, i) for i in range(len(context.jobs))]
@@ -273,10 +279,15 @@ class HourlyHistogramProcessor:  # pylint: disable=too-many-instance-attributes
                 for k in keepers:
                     k.process_hourly_group(hourly_data)
                 station_processed_hours += 1
-                if station_processed_hours % 10000 == 0:
+                station_processed_hours_total += 1
+                if station_processed_hours % context.show_progress_after == 0:
                     context.progress(station_processed_hours, station_processed_errors)
                     station_processed_errors = 0
                     station_processed_hours = 0
+                if (context._abort_after is not None  # pylint: disable=protected-access
+                        and station_processed_hours_total ==
+                        context._abort_after):  # pylint: disable=protected-access
+                    break
             elif isinstance(hourly_data, meteoparse.TafParseError):
                 context.write_error(str(hourly_data.message_text), str(hourly_data.error),
                                     str(hourly_data.hint))

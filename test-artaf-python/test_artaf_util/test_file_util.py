@@ -8,6 +8,20 @@ import pytest
 
 import artaf_util
 
+def _delete_recursive(directory_path):
+    for f in os.listdir(directory_path):
+        file_path = os.path.join(directory_path, f)
+        if os.path.isdir(file_path):
+            _delete_recursive(file_path)
+            # On some operating systems, we can't delete this manually, but it will be taken care
+            # of for us
+            try:
+                os.rmdir(file_path)
+            except PermissionError:
+                pass
+        else:
+            os.unlink(file_path)
+
 
 @contextmanager
 def make_temp_directory():
@@ -16,14 +30,7 @@ def make_temp_directory():
     try:
         yield temp_dir
     finally:
-        for f in os.listdir(temp_dir):
-            os.unlink(os.path.join(temp_dir, f))
-        # On some operating systems, we can't delete this manually, but it will be taken care
-        # of for us
-        try:
-            os.unlink(temp_dir)
-        except PermissionError:
-            pass
+        _delete_recursive(temp_dir)
 
 
 class TestSafeOpenWrite:
