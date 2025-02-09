@@ -11,8 +11,10 @@ import requests
 
 from meteostore.util import StationDesc
 
-
-def download_taf_stations():
+# Exclude from coverage report since the only point of this function is to be
+# called manually every once in a long while, and the major risk is the data provider
+# changing formats or ceasing service.
+def download_taf_stations(): # pragma: no cover
     """
     Get a list of all stations for which TAFs are issued from Iowa State's Mesonet
     :return: Alphabetically sorted list of stations as station_desc tuples
