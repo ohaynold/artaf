@@ -2,7 +2,7 @@ For now, this is just same sample analysis as a framework.
 
 # Some Summary Statistics
 
-We have loaded 13238063 data lines for 711 aerodromes for configuration
+We have loaded 139376801 data lines for 713 aerodromes for configuration
 full_set.
 
 ## Distribution of Wind Speeds
