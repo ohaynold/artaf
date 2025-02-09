@@ -1,6 +1,7 @@
 """Test artaf_util.file_util"""
 import os.path
 import tempfile
+import zipfile
 from contextlib import contextmanager
 
 import pytest
@@ -63,3 +64,20 @@ class TestSafeOpenWrite:
             with pytest.raises(IOError):
                 with  artaf_util.safe_open_write(temp_file_name, "r", encoding="ascii") as in_file:
                     in_file.read()
+
+
+class TestOpenCompressedZipWrite:
+    """Test artaf_util.pen_compressed_text_zip_write"""
+
+    def test_open_compressed_zip_write(self):
+        """Test roundtrip for compressed text file"""
+        test_content = "Hello world!\n"
+        with make_temp_directory() as temp_dir:
+            temp_file_name = os.path.join(temp_dir, "test.csv.zip")
+            inner_file_name = "test.csv"
+            with artaf_util.open_compressed_text_zip_write(temp_file_name, inner_file_name, "ascii",
+                                                           zipfile.ZIP_DEFLATED) as out_file:
+                out_file.write(test_content)
+            with zipfile.ZipFile(temp_file_name, "r") as in_zip_file:
+                the_bytes = in_zip_file.read(inner_file_name)
+                assert the_bytes.decode("ascii") == test_content
