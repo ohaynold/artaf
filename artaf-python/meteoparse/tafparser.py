@@ -156,6 +156,28 @@ class TafTreeTransformer(lark.Transformer):
             visibility_miles += int(enumerator) / int(denominator)
         return lark.Token("VISIBILITY_RANGE", visibility_miles)
 
+    def clouds_vertical_visibility(self, token):
+        """Parses as VV group as a CloudLayer"""
+        return CloudLayer(
+            int(token[0].value) * 100,
+            CloudCoverage("VV"),
+            False
+        )
+
+    def cloud_layer(self, branches):
+        """Produces a list of CloudLayer objects for the TAF"""
+        cloud_layer = TreeAccessor(branches)
+
+        cb = hasattr(cloud_layer, "CLOUD_LAYER_CUMULONIMBUS")
+
+        cloud_layer_obj = CloudLayer(
+            int(cloud_layer.CLOUDS_ALTITUDE.value) * 100,
+            cloud_layer.CLOUD_LAYER_COVERAGE.value,
+            cb
+        )
+
+        return cloud_layer_obj
+
     def WIND_SPEED(self, token):
         """Wind speed as an integer in knots"""
         return token.update(value=int(token.value))
@@ -199,28 +221,6 @@ class TafTreeTransformer(lark.Transformer):
     def CLOUDS_SKY_CLEAR(self, token):  # pylint: disable=unused-argument
         """Cloud layer with sky clear"""
         return CloudLayer(None, CloudCoverage("SKC"), False)
-
-    def clouds_vertical_visibility(self, token):
-        """Parses as VV group as a CloudLayer"""
-        return CloudLayer(
-            int(token[0].value) * 100,
-            CloudCoverage("VV"),
-            False
-        )
-
-    def cloud_layer(self, branches):
-        """Produces a list of CloudLayer objects for the TAF"""
-        cloud_layer = TreeAccessor(branches)
-
-        cb = hasattr(cloud_layer, "CLOUD_LAYER_CUMULONIMBUS")
-
-        cloud_layer_obj = CloudLayer(
-            int(cloud_layer.CLOUDS_ALTITUDE.value) * 100,
-            cloud_layer.CLOUD_LAYER_COVERAGE.value,
-            cb
-        )
-
-        return cloud_layer_obj
 
 
 # Was disabled above to allow for Lark transformer method names
