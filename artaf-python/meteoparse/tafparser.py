@@ -201,6 +201,10 @@ class TafTreeTransformer(lark.Transformer):
         return cloud_layer_obj
 
 
+# Was disabled above to allow for Lark transformer method names
+# pragma pylint: enable=invalid-name
+
+
 class CloudLayer:
     """
     Represents the cloud layer with altitude in feet, cloud coverage as a
@@ -276,10 +280,6 @@ class CloudCoverage:
         if self.coverage_string == "VV":
             english_string = "Vertical visibility"
         return english_string
-
-
-# Was disabled above to allow for Lark transformer method names
-# pragma pylint: enable=invalid-name
 
 
 LARK_DIR = os.path.join("artaf-python", "meteoparse", "lark")
