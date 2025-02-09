@@ -88,3 +88,29 @@ class Visibility:  # pylint: disable=too-few-public-methods
 
     def __float__(self):
         return self.visibility_miles
+
+
+class Wind:
+    """Wind with the possibility of a given or variable direction and of gusts.
+    Direction is in degrees and speeds are in knots"""
+
+    def __init__(self, direction, speed, gust):
+        self.direction = int(direction) if direction is not None else None
+        if self.direction == 360:
+            self.direction = 0
+        self.speed = int(speed)
+        self.gust = int(gust) if gust is not None else None
+        if self.direction:
+            assert 0 <= self.direction < 360
+        if self.gust is not None:
+            assert self.gust > self.speed
+
+    @property
+    def is_variable_direction(self):
+        "Test if the wind is coming from a variable direction"
+        return self.direction is None
+
+    @property
+    def speed_with_gust(self):
+        "Give the wind speed including gusts, if any"
+        return self.gust if self.gust is not None else self.speed

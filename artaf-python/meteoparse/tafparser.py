@@ -13,7 +13,7 @@ import lark
 
 import meteostore
 from meteoparse.tree_accessor import TreeAccessor
-from meteoparse.weatherobjects import CloudLayer, CloudCoverage, Visibility
+from meteoparse.weatherobjects import CloudLayer, CloudCoverage, Visibility, Wind
 
 
 class AmendmentType(Enum):
@@ -29,7 +29,7 @@ ParsedForecast = collections.namedtuple(
 
 WeatherConditions = collections.namedtuple(
     "WeatherConditions",
-    ["wind_speed", "wind_gust", "visibility", "clouds"])
+    ["wind", "visibility", "clouds"])
 
 FromLine = collections.namedtuple(
     "FromLine",
@@ -118,22 +118,26 @@ class TafTreeTransformer(lark.Transformer):
         :return: WeatherCondition tuple
         """
         from_conditions = TreeAccessor(branches).from_conditions
-        wind_group = from_conditions.wind_group
-        wind_speed = wind_group.WIND_SPEED.value
-        wind_gust = wind_group.wind_gust_group.WIND_SPEED.value \
-            if hasattr(wind_group, "wind_gust_group") \
-            else None
+        wind = from_conditions.WIND_GROUP.value
         visibility = from_conditions.VISIBILITY_GROUP.value
-
         cloud_layers_group = from_conditions['clouds'][0].children
 
         # See the clouds work beautifully by uncommenting these lines
         # for cloud_layer in cloud_layers_group:
         #    print(cloud_layer)
 
-        return WeatherConditions(wind_speed=wind_speed, wind_gust=wind_gust,
-                                 clouds=cloud_layers_group, visibility=visibility)
+        return WeatherConditions(wind=wind, clouds=cloud_layers_group, visibility=visibility)
         # TODO: Unroll TEMPO and PROB changes
+
+    def wind_group(self, branches):
+        """Parse wind, including direction and gust"""
+        elements = TreeAccessor(branches)
+        return lark.Token("WIND_GROUP", Wind(
+            None
+            if hasattr(elements.wind_direction, "WIND_DIRECTION_VARIABLE") else
+            int(elements.wind_direction.WIND_DIRECTION_DEGREES.value),
+            elements.WIND_SPEED.value,
+            elements.wind_gust_group.WIND_SPEED if hasattr(elements, "wind_gust_group") else None))
 
     def visibility_group(self, branches):
         """Parse visibility group. The visibility in statute miles may have integral and

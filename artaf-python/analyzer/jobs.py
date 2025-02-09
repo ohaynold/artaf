@@ -21,10 +21,20 @@ def get_year(hourly_group):
 
 def get_wind_speed(hourly_item):
     "Extract wind speed"
-    return hourly_item.conditions.wind_speed
+    return hourly_item.conditions.wind.speed
 
 
-def get_lowest_cloud_altitude(hourly_item):
+def get_wind_speed_with_gust(hourly_item):
+    "Extract wind speed including gust, if any"
+    return hourly_item.conditions.wind.speed_with_gust
+
+
+def get_wind_gust_spread(hourly_item):
+    "Extract the difference between gust and constant wind"
+    return hourly_item.conditions.wind.speed_with_gust - hourly_item.conditions.wind.speed
+
+
+def get_clouds_lowest_base(hourly_item):
     "Extract altitude of lowest cloud layers, independent of coverage"
     lowest_layer = hourly_item.conditions.clouds[0]
     # the highest cloud altitude we care about
@@ -39,7 +49,7 @@ def get_visibility(hourly_item):
     return float(hourly_item.conditions.visibility)
 
 
-def get_ceiling(hourly_item):
+def get_clouds_ceiling(hourly_item):
     "Extract altitude of lowest cloud layer with more than 50% coverage"
     ceiling_layers = [c for c in hourly_item.conditions.clouds if float(c.coverage) >= 0.5]
     # the highest cloud altitude we care about
@@ -57,8 +67,10 @@ DEFAULT_JOBS = [HourlyHistogramJob(name="YearlyStations",
                                    other_group_by={},
                                    values={
                                        "wind_speed": get_wind_speed,
-                                       "lowest_cloud_altitude": get_lowest_cloud_altitude,
-                                       "ceiling": get_ceiling,
+                                       "wind_speed_with_gust": get_wind_speed_with_gust,
+                                       "wind_gust_spread": get_wind_gust_spread,
+                                       "clouds_lowest_base": get_clouds_lowest_base,
+                                       "clouds_ceiling": get_clouds_ceiling,
                                        "visibility": get_visibility
                                    }
                                    )]
