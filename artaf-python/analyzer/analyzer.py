@@ -108,11 +108,8 @@ class HourlyHistogramKeeper:  # pylint: disable=too-many-instance-attributes
                         hourly_group.items]
 
         if ascending_group != self.current_ascending_group:
-            if len(self.counts) > 0:
-                self.counts = dict(sorted(list(self.counts.items()), key=lambda x: str(x[0])))
-                self.callback(ascending_group, self.counts, self.callback_info)
+            self.flush()
             self.current_ascending_group = ascending_group
-            self.counts = {}
 
         for value_name, value_fun in self.values:
             previous_value = value_fun(hourly_group.items[0])
@@ -127,6 +124,13 @@ class HourlyHistogramKeeper:  # pylint: disable=too-many-instance-attributes
                     self.counts[counts_key] = 1
 
                 previous_value = current_value
+
+    def flush(self):
+        """Write out accumulated statistics."""
+        if len(self.counts) > 0:
+            self.counts = dict(sorted(list(self.counts.items()), key=lambda x: str(x[0])))
+            self.callback(self.current_ascending_group, self.counts, self.callback_info)
+        self.counts = {}
 
 
 class ParallelContext:
@@ -279,6 +283,8 @@ class HourlyHistogramProcessor:  # pylint: disable=too-many-instance-attributes
                 station_processed_errors += 1
             else:
                 raise TypeError("Unexpected message type encountered.")
+        for k in keepers:
+            k.flush()
         context.progress(station_processed_hours, station_processed_errors)
 
 
