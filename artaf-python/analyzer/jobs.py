@@ -25,7 +25,12 @@ def get_wind_speed(hourly_item):
 
 def get_lowest_cloud_altitude(hourly_item):
     "Extract altitude of lowest cloud layers, independent of coverage"
-    return hourly_item.conditions.clouds[0].coverage_altitude
+    lowest_layer = hourly_item.conditions.clouds[0]
+    # the highest cloud altitude we care about
+    MAX_ALTITUDE = 18_000
+    if lowest_layer.is_sky_clear:
+        return MAX_ALTITUDE
+    return min(lowest_layer.cloud_base, MAX_ALTITUDE)
 
 DEFAULT_JOBS = [HourlyHistogramJob(name="YearlyStations",
                                    ascending_group_by={

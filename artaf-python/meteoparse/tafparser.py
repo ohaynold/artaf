@@ -174,7 +174,7 @@ class TafTreeTransformer(lark.Transformer):
 
     def CLOUDS_SKY_CLEAR(self, token):
         """Cloud layer with sky clear"""
-        return CloudLayer(0, CloudCoverage("SKC"), False)
+        return CloudLayer(None, CloudCoverage("SKC"), False)
 
     def clouds_vertical_visibility(self, token):
         return CloudLayer(
@@ -203,33 +203,26 @@ class CloudLayer:
     CloudCoverage object, and whether the cloud is cumulonimbus as a boolean.
     """
     def __init__(self, altitude, coverage, cb):
-        self.coverage_altitude = altitude
+        self.cloud_base = altitude
 
         # This allows for a CloudLayer to be created with either a string or a
         # pre-made CloudCoverage object. I don't know if it's better to force it
         # one way or the other or to allow the flexibility.
         if isinstance(coverage, CloudCoverage):
-            self.coverage_obj = coverage
+            self.coverage = coverage
         else:
-            self.coverage_obj = CloudCoverage(coverage)
+            self.coverage = CloudCoverage(coverage)
 
-        self.coverage_cb = cb
+        self.is_cumulonimbus = cb
 
     def __str__(self):
-        human_readable_altitude = f"{self.coverage_altitude} feet" if self.coverage_altitude != 0 else ""
-        return (f"{self.coverage_obj.in_english()} {human_readable_altitude}{', cumulonimbus' if self.is_cumulonimbus() else ''}")
+        human_readable_altitude = f"{self.cloud_base} feet" if self.cloud_base != 0 else ""
+        return (f"{self.coverage.in_english()} {human_readable_altitude}{', cumulonimbus' if self.is_cumulonimbus() else ''}")
 
-    def altitude(self):
-        """Return the cloud layer's altitude in feet"""
-        return self.coverage_altitude
-
-    def coverage(self):
-        """Return the cloud layer's coverage as a CloudCoverage object"""
-        return self.coverage_obj
-
-    def is_cumulonimbus(self):
-        """Return True if cumulonimbus, False if not"""
-        return self.coverage_cb
+    @property
+    def is_sky_clear(self):
+        "Is the sky clear?"
+        return self.coverage.coverage_string == "SKC"
 
 
 class CloudCoverage:
@@ -242,18 +235,22 @@ class CloudCoverage:
         return self.coverage_string
 
     def __float__(self):
+        # Definitions in AC 00-45H, section 5.11.2.9.1
         if self.coverage_string == "SKC":
-            coverage_float = 0.0
-        if self.coverage_string == "FEW":
-            coverage_float = .25
-        if self.coverage_string == "SCT":
-            coverage_float = .375
-        if self.coverage_string == "BKN":
-            coverage_float = .6875
-        if self.coverage_string == "OVC":
-            coverage_float = .0
-        if self.coverage_string == "VV":
-            coverage_float = .1
+            coverage_float = 0.0 # exactly no clouds -- the slightest whiff is FEW
+        elif self.coverage_string == "FEW":
+            coverage_float = 0.125 # 0 - 2 oktas
+        elif self.coverage_string == "SCT":
+            coverage_float = .375 # 3 - 4 oktas
+        elif self.coverage_string == "BKN":
+            coverage_float = .6875 #  5- 7 oktas
+        elif self.coverage_string == "OVC":
+            coverage_float = 0.9375 # 7-8 oktas
+                                    # there is no encoding parallelling SKC for exactly 100%
+        elif self.coverage_string == "VV":
+            coverage_float = 1.0 # Sky not visible anywhere
+        else:
+            raise ValueError(f"Unexpected type of cloud coverage: '{self.coverage_string}'")
 
         return coverage_float
 
