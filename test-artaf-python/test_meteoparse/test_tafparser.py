@@ -111,5 +111,6 @@ class TestParseTafsClouds:
         # Make sure it works in the correct order
         parsed_correct = parse_oneliner_taf("09005KT P6SM BKN010 FEW020 OVC030")
         assert parsed_correct.from_lines[0].conditions.clouds[0].cloud_base == 1000
+        # Make sure it gives an error in the incorrect order
         parsed_incorrect = parse_oneliner_taf("09005KT P6SM BKN010 OVC030 FEW020")
         assert isinstance(parsed_incorrect, meteoparse.tafparser.TafParseError)
