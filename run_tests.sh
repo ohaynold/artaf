@@ -19,5 +19,12 @@ if [[ $VIRTUAL_ENV_PROMPT != "venv" ]]; then
 fi
 
 export PYTHONPATH=artaf-python:test-artaf-python:$PYTHONPATH
+
+echo "*** Linting the Python code... ***"
+pylint test-artaf-python artaf-python
+
+echo "*** Running Python unit tests... ***"
 coverage run -m pytest
 coverage html
+
+echo "*** Finished... ***"
