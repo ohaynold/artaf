@@ -75,6 +75,5 @@ You can add your own configurations to [config/config.yaml](config/config.yaml).
 
 **This is still a work in progress, to be fleshed out during this week.**
 
-You can install the packages needed for testing with `./install_test.sh`. 
 Then `./run_tests.sh` will run the various function tests we provide and create test results as well as a
 coverage report.
