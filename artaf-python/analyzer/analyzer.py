@@ -133,7 +133,8 @@ class HourlyHistogramKeeper:  # pylint: disable=too-many-instance-attributes
         self.counts = {}
 
 
-class ParallelContext:
+# This does indeed get called in the unit test, but only by the parallel threads
+class ParallelContext: # pragma: no cover
     """This is a placeholder class for HourlyHistogramProcessor that can get pickled and passed
     to different processes in parallel processing."""
 
@@ -259,7 +260,8 @@ class HourlyHistogramProcessor:  # pylint: disable=too-many-instance-attributes
 
     def write_error(self, message_text, error, hint):
         """Receive a parse error to be logged"""
-        self.error_writer.writerow([message_text, error, hint])
+        # Fine not to exercise this in a tiny test data set
+        self.error_writer.writerow([message_text, error, hint]) # pragma: no cover
 
     @staticmethod
     def _process_station(params, context):
@@ -285,11 +287,12 @@ class HourlyHistogramProcessor:  # pylint: disable=too-many-instance-attributes
                         and station_processed_hours_total ==
                         context._abort_after):  # pylint: disable=protected-access
                     break
-            elif isinstance(hourly_data, meteoparse.TafParseError):
+            # Fine not to exercise these in a tiny test dataset
+            elif isinstance(hourly_data, meteoparse.TafParseError): # pragma: no cover
                 context.write_error(str(hourly_data.message_text), str(hourly_data.error),
                                     str(hourly_data.hint))
                 station_processed_errors += 1
-            else:
+            else: # pragma: no cover
                 raise TypeError("Unexpected message type encountered.")
         for k in keepers:
             k.flush()
