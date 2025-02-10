@@ -223,12 +223,12 @@ class HourlyHistogramProcessor:  # pylint: disable=too-many-instance-attributes
     def _initialize_output_files(self, exit_stack):
         self.out_files = [
             exit_stack.enter_context(
-                artaf_util.open_compressed_text_zip_write(
+                artaf_util.safe_open_compressed_text_zip_write(
                     os.path.join(self.output_dir, f"hist {job.name}.csv.zip"),
                     f"hist {job.name}.csv", "ascii", zipfile.ZIP_DEFLATED))
             for job in self.jobs]
         self.error_file = exit_stack.enter_context(
-            artaf_util.open_compressed_text_zip_write(
+            artaf_util.safe_open_compressed_text_zip_write(
                 os.path.join(self.output_dir, "errors.csv.zip"),
                 "errors.csv", "ascii", zipfile.ZIP_DEFLATED))
         self.out_writers = [csv.writer(f) for f in self.out_files]
