@@ -18,7 +18,7 @@ def _delete_recursive(directory_path):
             # of for us
             try:
                 os.rmdir(file_path)
-            except PermissionError:
+            except PermissionError:  # pragma: no cover
                 pass
         else:
             os.unlink(file_path)
