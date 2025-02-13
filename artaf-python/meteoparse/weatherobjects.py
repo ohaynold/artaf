@@ -29,7 +29,7 @@ class CloudLayer:
 
     @property
     def is_sky_clear(self):
-        "Is the sky clear?"
+        """Is the sky clear?"""
         return self.coverage.coverage_string == "SKC"
 
 
@@ -109,12 +109,12 @@ class Wind:
 
     @property
     def is_variable_direction(self):
-        "Test if the wind is coming from a variable direction"
+        """Test if the wind is coming from a variable direction"""
         return self.direction is None
 
     @property
     def speed_with_gust(self):
-        "Give the wind speed including gusts, if any"
+        """Give the wind speed including gusts, if any"""
         return self.gust if self.gust is not None else self.speed
 
     def cartesian(self, with_gust=False):
@@ -123,6 +123,12 @@ class Wind:
             return (None, None)
         speed = self.speed_with_gust if with_gust else self.speed
         direction_radians = math.radians(self.direction)
-        north = speed * math.cos(direction_radians)
-        east = speed * math.sin(direction_radians)
+        # Rounding is to compensate for floating point error at wind headings
+        # of 90, 180, and 270 degrees. 360 is not a factor because it gets auto-
+        # corrected to 0 when the object is created.
+        #
+        # Whether 10 decimal places is sufficient, I will leave to others to
+        # decide. --Neal
+        north = speed * round(math.cos(direction_radians), 10)
+        east = speed * round(math.sin(direction_radians), 10)
         return north, east

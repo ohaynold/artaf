@@ -4,6 +4,7 @@ For testing the parser, it is simplest to go all the way from a TAF message to t
 parsed output instead of building a framework to set up as method as it would during parsing."""
 
 import datetime
+import math
 
 import meteoparse.tafparser
 
@@ -27,6 +28,101 @@ def parse_oneliner_taf(conditions_string):
     message_time = datetime.datetime(2024, 1, 1, 0, 20, 0)
     parsed = meteoparse.tafparser.parse_taf(message_time, taf)
     return parsed
+
+class TestParseTafsWinds:
+    """Test whether winds get parsed correctly."""
+
+    def test_winds_speed_heading(self):
+        """Test that the speed and direction are correct in the Wind object."""
+        parsed = parse_oneliner_taf("09005KT P6SM SKC")
+        wind = parsed.from_lines[0].conditions.wind
+        assert wind.speed == 5
+        assert wind.direction == 90
+
+    def test_winds_variable(self):
+        """Test that Variable winds are captured correctly for a VRB wind."""
+        parsed = parse_oneliner_taf("VRB05KT P6SM SKC")
+        wind = parsed.from_lines[0].conditions.wind
+        assert wind.speed == 5
+        assert wind.is_variable_direction
+        assert wind.direction is None
+
+    def test_winds_gust(self):
+        """Test that wind gusts are correctly stored in a Wind object."""
+        parsed = parse_oneliner_taf("09005G10KT P6SM SKC")
+        wind = parsed.from_lines[0].conditions.wind
+        assert wind.speed == 5
+        assert wind.speed_with_gust == 10
+        assert wind.direction == 90
+
+    def test_winds_from_north(self):
+        """Test that the Wind object automatically corrects a wind heading
+        of 360 to 0 degrees."""
+        # If the TAF somehow gets a wind heading of 360, the Wind object should
+        # translate that to a direction of 0 degrees.
+        parsed = parse_oneliner_taf("36005KT P6SM SKC")
+        wind = parsed.from_lines[0].conditions.wind
+        assert wind.direction == 0
+
+    def test_winds_cartesian(self):
+        """Test that the cartesian coordinates for given TAFs are correct.
+
+        The following headings are included in the test:
+
+        0  45  90  135  180  225  270  315
+        """
+        # This is partly an exercise for myself to remember how the unit circle
+        # works, but I do see a little bit of value in verifying that the
+        # cartesian() method still spits out the right numbers; i.e. that math
+        # is still math.
+        #
+        # See https://www.youtube.com/watch?v=3QtRK7Y2pPU for more details
+        # re: the persistence of math.
+
+        north_parsed = parse_oneliner_taf("00005KT P6SM SKC")
+        (north_component, east_component) = north_parsed.from_lines[0].conditions.wind.cartesian()
+        assert north_component == 5.0
+        assert east_component == 0.0
+
+        east_parsed = parse_oneliner_taf("09005KT P6SM SKC")
+        (north_component, east_component) = east_parsed.from_lines[0].conditions.wind.cartesian()
+        assert north_component == 0.0
+        assert east_component == 5.0
+
+        south_parsed = parse_oneliner_taf("18005KT P6SM SKC")
+        (north_component, east_component) = south_parsed.from_lines[0].conditions.wind.cartesian()
+        assert north_component == -5.0
+        assert east_component == 0.0
+
+        west_parsed = parse_oneliner_taf("27005KT P6SM SKC")
+        (north_component, east_component) = west_parsed.from_lines[0].conditions.wind.cartesian()
+        assert north_component == 0.0
+        assert east_component == -5.0
+
+        # For non-cardinal directions, some rounding is required. The degree of precision is up to you.
+        rounding_digits = 5
+        # The windspeed variable is established to make the formula easier to understand
+        windspeed = 5
+
+        northeast_parsed = parse_oneliner_taf(f"045{windspeed:02d}KT P6SM SKC")
+        (ne_north_component, ne_east_component) = northeast_parsed.from_lines[0].conditions.wind.cartesian()
+        assert round(ne_north_component, rounding_digits) == round(windspeed * math.sqrt(2)/2, rounding_digits)
+        assert round(ne_east_component, rounding_digits) == round(windspeed * math.sqrt(2)/2, rounding_digits)
+
+        southeast_parsed = parse_oneliner_taf(f"135{windspeed:02d}KT P6SM SKC")
+        (se_north_component, se_east_component) = southeast_parsed.from_lines[0].conditions.wind.cartesian()
+        assert round(se_north_component, rounding_digits) == round(windspeed * -math.sqrt(2)/2, rounding_digits)
+        assert round(se_east_component, rounding_digits) == round(windspeed * math.sqrt(2)/2, rounding_digits)
+
+        southwest_parsed = parse_oneliner_taf(f"225{windspeed:02d}KT P6SM SKC")
+        (sw_north_component, sw_east_component) = southwest_parsed.from_lines[0].conditions.wind.cartesian()
+        assert round(sw_north_component, rounding_digits) == round(windspeed * -math.sqrt(2)/2, rounding_digits)
+        assert round(sw_east_component, rounding_digits) == round(windspeed * -math.sqrt(2)/2, rounding_digits)
+
+        northwest_parsed = parse_oneliner_taf(f"315{windspeed:02d}KT P6SM SKC")
+        (nw_north_component, nw_east_component) = northwest_parsed.from_lines[0].conditions.wind.cartesian()
+        assert round(nw_north_component, rounding_digits) == round(windspeed * math.sqrt(2)/2, rounding_digits)
+        assert round(nw_east_component, rounding_digits) == round(windspeed * -math.sqrt(2)/2, rounding_digits)
 
 
 class TestParseTafsClouds:
