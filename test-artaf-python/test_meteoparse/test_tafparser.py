@@ -64,12 +64,12 @@ class TestParseTafsWinds:
         wind = parsed.from_lines[0].conditions.wind
         assert wind.direction == 0
 
-    def test_winds_cartesian(self):
+    def test_winds_cartesian_cardinals(self):
         """Test that the cartesian coordinates for given TAFs are correct.
 
         The following headings are included in the test:
 
-        0  45  90  135  180  225  270  315
+        0  90  180  270
         """
         # This is partly an exercise for myself to remember how the unit circle
         # works, but I do see a little bit of value in verifying that the
@@ -99,30 +99,50 @@ class TestParseTafsWinds:
         assert north_component == 0.0
         assert east_component == -5.0
 
-        # For non-cardinal directions, some rounding is required. The degree of precision is up to you.
-        rounding_digits = 5
+    def test_winds_cartesian_half_cardinals(self):
+        """Test that the cartesian coordinates for "half-cardinal" directions are correct.
+        That is, NE, SE, SW, NW."""
+        # For non-cardinal directions, some rounding is required.
+        digits = 5
         # The windspeed variable is established to make the formula easier to understand
         windspeed = 5
 
-        northeast_parsed = parse_oneliner_taf(f"045{windspeed:02d}KT P6SM SKC")
-        (ne_north_component, ne_east_component) = northeast_parsed.from_lines[0].conditions.wind.cartesian()
-        assert round(ne_north_component, rounding_digits) == round(windspeed * math.sqrt(2)/2, rounding_digits)
-        assert round(ne_east_component, rounding_digits) == round(windspeed * math.sqrt(2)/2, rounding_digits)
+        northeast_parsed = parse_oneliner_taf(f"045{windspeed:02d}KT P6SM SKC").from_lines[0]
+        (ne_north_component, ne_east_component) = northeast_parsed.conditions.wind.cartesian()
+        assert round(ne_north_component, digits) == round(windspeed * math.sqrt(2)/2, digits)
+        assert round(ne_east_component, digits) == round(windspeed * math.sqrt(2)/2, digits)
 
-        southeast_parsed = parse_oneliner_taf(f"135{windspeed:02d}KT P6SM SKC")
-        (se_north_component, se_east_component) = southeast_parsed.from_lines[0].conditions.wind.cartesian()
-        assert round(se_north_component, rounding_digits) == round(windspeed * -math.sqrt(2)/2, rounding_digits)
-        assert round(se_east_component, rounding_digits) == round(windspeed * math.sqrt(2)/2, rounding_digits)
+        southeast_parsed = parse_oneliner_taf(f"135{windspeed:02d}KT P6SM SKC").from_lines[0]
+        (se_north_component, se_east_component) = southeast_parsed.conditions.wind.cartesian()
+        assert round(se_north_component, digits) == round(windspeed * -math.sqrt(2)/2, digits)
+        assert round(se_east_component, digits) == round(windspeed * math.sqrt(2)/2, digits)
 
-        southwest_parsed = parse_oneliner_taf(f"225{windspeed:02d}KT P6SM SKC")
-        (sw_north_component, sw_east_component) = southwest_parsed.from_lines[0].conditions.wind.cartesian()
-        assert round(sw_north_component, rounding_digits) == round(windspeed * -math.sqrt(2)/2, rounding_digits)
-        assert round(sw_east_component, rounding_digits) == round(windspeed * -math.sqrt(2)/2, rounding_digits)
+        southwest_parsed = parse_oneliner_taf(f"225{windspeed:02d}KT P6SM SKC").from_lines[0]
+        (sw_north_component, sw_east_component) = southwest_parsed.conditions.wind.cartesian()
+        assert round(sw_north_component, digits) == round(windspeed * -math.sqrt(2)/2, digits)
+        assert round(sw_east_component, digits) == round(windspeed * -math.sqrt(2)/2, digits)
 
-        northwest_parsed = parse_oneliner_taf(f"315{windspeed:02d}KT P6SM SKC")
-        (nw_north_component, nw_east_component) = northwest_parsed.from_lines[0].conditions.wind.cartesian()
-        assert round(nw_north_component, rounding_digits) == round(windspeed * math.sqrt(2)/2, rounding_digits)
-        assert round(nw_east_component, rounding_digits) == round(windspeed * -math.sqrt(2)/2, rounding_digits)
+        northwest_parsed = parse_oneliner_taf(f"315{windspeed:02d}KT P6SM SKC").from_lines[0]
+        (nw_north_component, nw_east_component) = northwest_parsed.conditions.wind.cartesian()
+        assert round(nw_north_component, digits) == round(windspeed * math.sqrt(2)/2, digits)
+        assert round(nw_east_component, digits) == round(windspeed * -math.sqrt(2)/2, digits)
+
+class TestParseTafsVisibility:
+    """Test whether visibility conditions get parsed correctly"""
+
+    def test_visibility_exactly(self):
+        """Test an exact visibility (that is, not an excess)"""
+        parsed = parse_oneliner_taf("09005KT 6SM SKC")
+        visibility = parsed.from_lines[0].conditions.visibility
+        assert visibility.visibility_miles == 6.0
+        assert visibility.is_excess is False
+
+    def test_visibility_excess(self):
+        """Test a visibility measured in excess of a specific distance"""
+        parsed = parse_oneliner_taf("09005KT P6SM SKC")
+        visibility = parsed.from_lines[0].conditions.visibility
+        assert visibility.visibility_miles == 6.0
+        assert visibility.is_excess is True
 
 
 class TestParseTafsClouds:
