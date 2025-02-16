@@ -30,13 +30,18 @@ of the data](output/Statistics.md).
 
 # Setup
 
-To set up the project, clone the repository. You will need [Python 3.10 or newer](https://www.python.org/downloads/) 
-(or PyPy for a speed gain) and [R 4.4 or newer](https://cran.r-project.org/).
+To set up the project, clone the repository. You will also need all of the following: 
 
-On Debian or Debian-based GNU/Linux distributions, you may need to first install the python3-venv package via your 
+1. A shell compatible with ``sh``
+   - On Windows, you can use Git Bash [included with git](https://git-scm.com/downloads/win)
+2. [Python 3.10 or newer](https://www.python.org/downloads/)
+   - (or PyPy for a speed gain)
+3. [R 4.4 or newer](https://cran.r-project.org/).
+
+On Debian or Debian-based GNU/Linux distributions, you may also need to first install the ``python3-venv`` package via your 
 package manager.
 
-Automated setup instructions, assuming Python 3, R, and bash are available:
+After you install the pre-requisites, all that's required to set it up is to run the following command in your shell:
 
 ```commandline
 ./install.sh
@@ -49,10 +54,8 @@ as of now) all in the correct order. It downloads TAFs and then analyzes them (f
 file for statistical analysis).
 
 If you want to run on a very small dataset just to see that it functions, pass the command line arguments
-``--config tiny_data``. Note that we don't provide automated dependency management yet, so you
-may have to install the required modules by hand. If you're running the full dataset, we will download about
-20 million TAFs, so give it a little time and disk space. The full dataset will take about three hours to
-download and 800 MB of storage.
+``--config tiny_data``. If you're running the full dataset, we will download about 20 million TAFs, so give it a little 
+time and disk space. The full dataset will take about three hours to download and 800 MB of storage.
 
 ## Options
 
