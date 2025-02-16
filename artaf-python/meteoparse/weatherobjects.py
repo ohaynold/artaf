@@ -25,7 +25,7 @@ class CloudLayer:
     def __str__(self):
         human_readable_altitude = f"{self.cloud_base} feet" if self.cloud_base != 0 else ""
         return (f"{self.coverage.in_english()} {human_readable_altitude}"
-                f"{', cumulonimbus' if self.is_cumulonimbus() else ''}")
+                f"{', cumulonimbus' if self.is_cumulonimbus else ''}")
 
     @property
     def is_sky_clear(self):

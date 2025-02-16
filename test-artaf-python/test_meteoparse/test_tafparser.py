@@ -5,6 +5,7 @@ parsed output instead of building a framework to set up as method as it would du
 
 import datetime
 import math
+import pytest
 
 import meteoparse.tafparser
 
@@ -18,7 +19,7 @@ KTST 010020Z 0100/0200 """
 
 def parse_oneliner_taf(conditions_string):
     """
-    Make an parse a simple one-liner TAF with the same conditions forecast for a day.
+    Make and parse a simple one-liner TAF with the same conditions forecast for a day.
     Useful to test parsing of weather phenomena.
     :param conditions_string: Conditions for the one-liner, e.g., "09005KT P6SM SKC"
     :return: the parsed TAF
@@ -58,14 +59,12 @@ class TestParseTafsWinds:
     def test_winds_from_north(self):
         """Test that the Wind object automatically corrects a wind heading
         of 360 to 0 degrees."""
-        # If the TAF somehow gets a wind heading of 360, the Wind object should
-        # translate that to a direction of 0 degrees.
         parsed = parse_oneliner_taf("36005KT P6SM SKC")
         wind = parsed.from_lines[0].conditions.wind
         assert wind.direction == 0
 
     def test_winds_cartesian(self):
-        """Test that the cartesian coordinates for given wind headings are correct."""
+        """Test that the Cartesian coordinates for given wind headings are correct."""
 
         # This is partly an exercise for myself to remember how the unit circle
         # works, but I do see a little bit of value in verifying that the
@@ -76,7 +75,6 @@ class TestParseTafsWinds:
         # re: the persistence of math.
 
         windspeed = 5
-        digits = 5
 
         winds_cartesian_components = (
             {"heading": 0,   "north": 1.0,              "east": 0.0},
@@ -92,8 +90,8 @@ class TestParseTafsWinds:
         for wind in winds_cartesian_components:
             wind_parsed = parse_oneliner_taf(f"{wind['heading']:03d}{windspeed:02d}KT P6SM SKC")
             (north_coord, east_coord) = wind_parsed.from_lines[0].conditions.wind.cartesian()
-            assert round(north_coord, digits) == round(windspeed * wind['north'], digits)
-            assert round(east_coord, digits) == round(windspeed * wind['east'], digits)
+            assert north_coord == pytest.approx(windspeed * wind['north'])
+            assert east_coord == pytest.approx(windspeed * wind['east'])
 
 class TestParseTafsVisibility:
     """Test whether visibility conditions get parsed correctly"""
@@ -198,3 +196,18 @@ class TestParseTafsClouds:
         # Make sure it gives an error in the incorrect order
         parsed_incorrect = parse_oneliner_taf("09005KT P6SM BKN010 OVC030 FEW020")
         assert isinstance(parsed_incorrect, meteoparse.tafparser.TafParseError)
+
+    def test_clouds_plain_english(self):
+        """Test that the cloud layers are correctly translated to plain English"""
+        test_clouds = [
+            ("FEW010CB", "Few 1000 feet, cumulonimbus"),
+            ("SCT020", "Scattered 2000 feet"),
+            ("BKN030", "Broken 3000 feet"),
+            ("OVC040", "Overcast 4000 feet")
+        ]
+        parsed = parse_oneliner_taf(f"09005KT P6SM {' '.join([x[0] for x in test_clouds])}")
+        english_strings = [x[1] for x in test_clouds]
+
+        for (layer, plain_english) in \
+            zip(parsed.from_lines[0].conditions.clouds, english_strings):
+            assert str(layer) == plain_english
