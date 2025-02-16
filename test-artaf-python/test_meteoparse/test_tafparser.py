@@ -33,6 +33,28 @@ def parse_oneliner_taf(conditions_string):
 class TestParseTafsWinds:
     """Test whether winds get parsed correctly."""
 
+    def test_winds_valid_heading(self):
+        """Test that only wind headings of 000 to 360 are accepted"""
+
+        # Note that the range() ends before 360; i.e., the highest number tested is 359.
+        # We will test a heading of 360 a bit farther down.
+        for heading in range(0, 360):
+            parsed = parse_oneliner_taf(f"{heading:03d}05KT P6SM SKC")
+            wind = parsed.from_lines[0].conditions.wind
+            assert wind.direction == heading
+
+        # We will test a heading of 360 here, which should get auto-converted to a heading of 0.
+        # Also note that this same functionality is validated in test_winds_from_north.
+        parsed = parse_oneliner_taf("36005KT P6SM SKC")
+        wind = parsed.from_lines[0].conditions.wind
+        assert wind.direction == 0
+
+        # All other headings should fail. We're blindly trusting that the regex will catch anything
+        # in excess of three digits.
+        for heading in range(361, 1000):
+            parsed_incorrect = parse_oneliner_taf(f"{heading:03d}05KT P6SM SKC")
+            assert isinstance(parsed_incorrect, meteoparse.tafparser.TafParseError)
+
     def test_winds_speed_heading(self):
         """Test that the speed and direction are correct in the Wind object."""
         parsed = parse_oneliner_taf("09005KT P6SM SKC")

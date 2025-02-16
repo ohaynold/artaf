@@ -54,7 +54,7 @@ WIND_DIRECTION_VARIABLE: "VRB"
 # Three digit wind speeds are somewhat common, but some are clearly erroneous, so we can't really
 # be lenient.
 WIND_SPEED: /\d{2}/
-WIND_DIRECTION_DEGREES: /\d{3}/
+WIND_DIRECTION_DEGREES: /0[0-9]{2}|[1-2][0-9]{2}|3[0-5][0-9]|360/
 
 visibility_group: VISIBILITY_EXCEEDING? visibility_range "SM"
 VISIBILITY_EXCEEDING: "P"
