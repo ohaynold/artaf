@@ -205,8 +205,8 @@ class TestParseTafsClouds:
             ("BKN030", "Broken 3000 feet"),
             ("OVC040", "Overcast 4000 feet")
         ]
-        parsed = parse_oneliner_taf(f"09005KT P6SM {' '.join([x[0] for x in test_clouds])}")
-        english_strings = [x[1] for x in test_clouds]
+        parsed = parse_oneliner_taf(f"09005KT P6SM {' '.join([cloud[0] for cloud in test_clouds])}")
+        english_strings = [cloud[1] for cloud in test_clouds]
 
         for (layer, plain_english) in \
             zip(parsed.from_lines[0].conditions.clouds, english_strings):
