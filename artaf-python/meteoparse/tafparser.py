@@ -54,6 +54,10 @@ class TafTreeTransformer(lark.Transformer):
     there.
     """
 
+    # For someone who had no experience with lark, it took me quite a while to figure out
+    # how to write the functions in this class. Maybe a comment with a template function would
+    # be helpful?
+
     # noinspection PyTypeChecker
     def __init__(self, issue_date):
         super().__init__(self)

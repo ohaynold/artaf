@@ -10,6 +10,14 @@ class CloudLayer:
     """
 
     def __init__(self, altitude, coverage, cb):
+        # Question: do we need to be equipped for CAVOK? Does CAVOK get used in USA aviation?
+        # My Google searches are inconclusive.
+        #
+        # Also, if there are plans to expand to worldwide analysis, we should investigate whether
+        # the unit of measurement is always feet. I know that some places issue altitudes in meters,
+        # and they might also do weather observations/forecasts in meters. As of about a decade ago
+        # it was that way in Kyrgyzstan, and I heard people say that some other Former Soviet Union
+        # countries used meters.
         self.cloud_base = altitude
 
         # This allows for a CloudLayer to be created with either a string or a
@@ -84,6 +92,10 @@ class Visibility:  # pylint: disable=too-few-public-methods
     """A visibility in statute miles. is_excess indicates that the visibility is higher than
     the number given."""
 
+    # This class definition makes it exclusively useful for TAFs published in USA and Canada. If you
+    # want to analyze TAFs produced in other countries, they use meters instead of statute miles;
+    # you'll need to write another method or rewrite this one.
+
     def __init__(self, visibility_miles, is_excess):
         self.visibility_miles = float(visibility_miles)
         self.is_excess = bool(is_excess)
@@ -98,6 +110,9 @@ class Wind:
 
     def __init__(self, direction, speed, gust):
         self.direction = int(direction) if direction is not None else None
+        # Question for Oliver: why do you translate a heading of 360 to 0? I suspect it's to
+        # standardize otherwise inconsistent representations of wind from exactly north, but I think
+        # an explicit explanation would be helpful.
         if self.direction == 360:
             self.direction = 0
         self.speed = int(speed)
@@ -118,7 +133,8 @@ class Wind:
         return self.gust if self.gust is not None else self.speed
 
     def cartesian(self, with_gust=False):
-        """Gives the wind in cartesian coordinates"""
+        """Gives the wind in Cartesian coordinates"""
+
         if self.direction is None:
             return (None, None)
         speed = self.speed_with_gust if with_gust else self.speed
@@ -129,6 +145,10 @@ class Wind:
         #
         # Whether 10 decimal places is sufficient, I will leave to others to
         # decide. --Neal
+        #
+        # This method incorporates the windspeed in its calculations. If there's another application
+        # that warrants producing Cartesian coordinates for the pure wind heading sans windspeed,
+        # then writing another method would likely be appropriate.
         north = speed * round(math.cos(direction_radians), 10)
         east = speed * round(math.sin(direction_radians), 10)
         return north, east
