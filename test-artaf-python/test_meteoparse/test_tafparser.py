@@ -112,6 +112,8 @@ class TestParseTafsWinds:
         for wind in winds_cartesian_components:
             wind_parsed = parse_oneliner_taf(f"{wind['heading']:03d}{windspeed:02d}KT P6SM SKC")
             (north_coord, east_coord) = wind_parsed.from_lines[0].conditions.wind.cartesian()
+            # The pytest.approx() function is used to compensate for floating point error in the
+            # Wind.cartesian() method. By default, the approx() function uses 1e-6 precision.
             assert north_coord == pytest.approx(windspeed * wind['north'])
             assert east_coord == pytest.approx(windspeed * wind['east'])
 

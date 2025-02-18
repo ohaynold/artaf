@@ -39,7 +39,7 @@ def process_arguments():  # pragma: no cover
     Process command line arguments and load the appropriate configuration to run
     :return: List of aerodromes, year to start with, year to end with
     """
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(prog="runme.sh [or] process_data.py")
     parser.add_argument("--config", help="select a configuration to run in",
                         default="full_set")
     arguments = parser.parse_args()
