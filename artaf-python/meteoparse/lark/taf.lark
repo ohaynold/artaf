@@ -1,5 +1,9 @@
 # This is the grammar we're using to parse TAFs, in a modified Extended Backus-Naur form
 #
+# As of now, this covers only TAFs as issued in the United States, though an expansion
+# to other countries would not be hard. If you are implementing such an expansion, be sure
+# to take units of measurement (e.g., feet vs meters) into account.
+#
 # If this looks scary, the documentation for Lark, the parser generator we're using, lives
 # at https://lark-parser.readthedocs.io/en/stable/ .
 # The classical and ultimate book on what's going on here is the famous "Dragon Book,"

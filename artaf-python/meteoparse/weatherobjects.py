@@ -10,14 +10,6 @@ class CloudLayer:
     """
 
     def __init__(self, altitude, coverage, cb):
-        # Question: do we need to be equipped for CAVOK? Does CAVOK get used in USA aviation?
-        # My Google searches are inconclusive.
-        #
-        # Also, if there are plans to expand to worldwide analysis, we should investigate whether
-        # the unit of measurement is always feet. I know that some places issue altitudes in meters,
-        # and they might also do weather observations/forecasts in meters. As of about a decade ago
-        # it was that way in Kyrgyzstan, and I heard people say that some other Former Soviet Union
-        # countries used meters.
         self.cloud_base = altitude
 
         # This allows for a CloudLayer to be created with either a string or a

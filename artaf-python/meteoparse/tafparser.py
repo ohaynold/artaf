@@ -1,6 +1,6 @@
 """This is the parser for TAFs. Function parse_taf() does all the work. We're using Lark as our
 parser generator, in the LALR mode for speed. In addition to the grammar in lark/taf.lark, class
-TafTreeTransformer does the remaining heave lifting of building Pythonic output objects."""
+TafTreeTransformer does the remaining heavy lifting of building Pythonic output objects."""
 
 import collections
 import csv
@@ -52,11 +52,10 @@ class TafTreeTransformer(lark.Transformer):
 
     The method names correspond to the rules and terminals in taf.lark. See for more references
     there.
-    """
 
-    # For someone who had no experience with lark, it took me quite a while to figure out
-    # how to write the functions in this class. Maybe a comment with a template function would
-    # be helpful?
+    In addition to the lark transformer documentation referenced above, also see the comments
+    in taf.lark for additional explanation and references to the standards.
+    """
 
     # noinspection PyTypeChecker
     def __init__(self, issue_date):
