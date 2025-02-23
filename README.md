@@ -37,11 +37,12 @@ To set up the project, clone the repository. You will also need all of the follo
 2. [Python 3.10 or newer](https://www.python.org/downloads/)
    - (or PyPy for a speed gain)
 3. [R 4.4 or newer](https://cran.r-project.org/).
+4. To generate the output report (not yet fully implemented) in PDF, a common [(La)TeX](https://www.tug.org/texlive/) distribution. This is not required if you are content with HTML output.
 
 On Debian or Debian-based GNU/Linux distributions, you may also need to first install the ``python3-venv`` package via your 
 package manager.
 
-After you install the pre-requisites, all that's required to set it up is to run the following command in your shell:
+After you install the prerequisites, all that's required to set it up is to run the following command in your shell:
 
 ```commandline
 ./install.sh

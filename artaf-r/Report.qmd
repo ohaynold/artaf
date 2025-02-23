@@ -1,0 +1,245 @@
+---
+title: "Autoregressive Behavior of Aviation Weather Forecasts"
+author: "Oliver M. Haynold & Neal Ylitalo"
+date: "`r Sys.Date()`"
+output: pdf_document
+format: pdf
+---
+
+```{r setup, include=FALSE}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(usmap)
+library(palettes)
+library(knitr)
+
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r}
+lines <- read_csv("../data/histograms/full_set/hist YearlyStations.csv.zip",
+                  col_types = cols(
+                    aerodrome = "f",
+                    year="i",
+                    variable="f",
+                    previous="n",
+                    current="n",
+                    final="n",
+                    count="i"
+                  ))
+
+stations <- read_csv("../config/stations.csv", 
+                     col_types = cols(
+                       station = "f",
+                       name = "c",
+                       latitude = "n",
+                       longitude = "n",
+                       center = "f"
+                     )) %>%
+              rename(aerodrome=station) %>%
+              select(-center)
+```
+
+
+
+# Research Problem
+
+TODO
+
+# Analysis
+
+TODO
+
+# Results
+
+TODO
+
+# Detailed Data Analysis {.appendix}
+
+## Wind Speed without Gusts
+
+### Summary Statistics
+
+```{r}
+  wind_speed_hist <- lines %>% 
+      filter(variable=="wind_speed") %>%
+      group_by(current) %>%
+      summarize(count=sum(count)) %>%
+      ungroup()
+```
+
+Wind speeds are forecast at an average of
+`r sprintf("%.1f", weighted.mean(wind_speed_hist$current, wind_speed_hist$count))`
+knots.
+
+```{r}
+ print(
+   ggplot(wind_speed_hist, aes(x=current)) + 
+     geom_histogram(aes(weight=count), binwidth = 1) +
+     labs(title="Histogram of Wind Speeds", x="Wind Speed kts", y="Count") +
+     coord_cartesian(xlim=c(0,50)) +
+     theme_bw()
+   )
+```
+
+For wind speeds exceeding 10 knots, we see an exponential decay in their frequency 
+of being forecast, albeit with a distinct clustering around round numbers. However,
+that relationship breaks down for the very small number of predictions exceeding 50 knots.
+
+```{r}
+ print(
+   ggplot(wind_speed_hist %>% filter(current >= 10), aes(x=current)) + 
+     geom_histogram(aes(weight=count), binwidth = 1) +
+     labs(title="Histogram of Wind Speeds", x="Wind Speed kts", y="Count") +
+     scale_y_log10() +
+     theme_bw()
+   )
+```
+
+By station location, we see the well-known wind corridor from the Dakotas to West Texas.
+
+```{r}
+wind_speed_avg <- lines %>% 
+      filter(variable=="wind_speed") %>%
+      group_by(aerodrome) %>%
+      summarize(current=mean(current)) %>%
+      ungroup() %>%
+      left_join(stations, by=c("aerodrome")) %>%
+      filter(substr(aerodrome, 1, 1)=="K" | substr(aerodrome, 1, 2)=="PA" | substr(aerodrome, 1, 2)=="PH") 
+
+
+plot_usmap(fill="grey") +
+  geom_sf(data=usmap_transform(wind_speed_avg, input_names = c("longitude", "latitude")),
+             aes(colour=current)) +
+  scale_colour_gradientn(colours = heat.colors(10)) +
+  labs(title = "Average Wind Forecast Speed by Location", colour="Knots")
+```
+
+The windiest airports, by prediction, are:
+
+```{r}
+kable(head(
+  wind_speed_avg %>% 
+  arrange(-current) %>% 
+  rename(average_wind = current) %>% 
+  select(aerodrome, name, average_wind)),
+  col.names = c("Aerodrome", "Name", "Average wind, kts"),
+  digits = 1)
+```
+
+## Wind Speed with Gusts
+
+### Summary Statistics
+
+```{r}
+  wind_speed_hist <- lines %>% 
+      filter(variable=="wind_speed_with_gust") %>%
+      group_by(current) %>%
+      summarize(count=sum(count)) %>%
+      ungroup()
+```
+
+Wind speeds with gust are forecast at an average of
+`r sprintf("%.1f", weighted.mean(wind_speed_hist$current, wind_speed_hist$count))`
+knots.
+
+We see an interesting distribution of wind speeds with gust with the typical exponential
+decay interrupted between 13 and 25 knots, the proceeding as expected from 25 knots to
+70 knots, and ceasing there:
+
+```{r}
+ print(
+   ggplot(wind_speed_hist, aes(x=current)) + 
+     geom_histogram(aes(weight=count), binwidth = 1) +
+     labs(title="Histogram of Wind Speeds with Gust", x="Wind Speed with Gust kts", y="Count") +
+     coord_cartesian(xlim=c(0,50)) +
+     theme_bw()
+   )
+```
+
+```{r}
+ print(
+   ggplot(wind_speed_hist %>% filter(current >= 10), aes(x=current)) + 
+     geom_histogram(aes(weight=count), binwidth = 1) +
+     labs(title="Histogram of Wind Speeds with Gust", x="Wind Speed with Gust kts", y="Count") +
+     scale_y_log10() +
+     theme_bw()
+   )
+```
+The geographical distribution is as expected.
+
+```{r}
+wind_speed_avg <- lines %>% 
+      filter(variable=="wind_speed_with_gust") %>%
+      group_by(aerodrome) %>%
+      summarize(current=mean(current)) %>%
+      ungroup() %>%
+      left_join(stations, by=c("aerodrome")) %>%
+      filter(substr(aerodrome, 1, 1)=="K" | substr(aerodrome, 1, 2)=="PA" | substr(aerodrome, 1, 2)=="PH") 
+
+
+plot_usmap(fill="grey") +
+  geom_sf(data=usmap_transform(wind_speed_avg, input_names = c("longitude", "latitude")),
+             aes(colour=current)) +
+  scale_colour_gradientn(colours = heat.colors(10)) +
+  labs(title = "Average Wind Forecast Speed with Gust by Location", colour="Knots")
+```
+
+
+The windiest airports, by prediction, are:
+
+```{r}
+kable(head(
+  wind_speed_avg %>% 
+  arrange(-current) %>% 
+  rename(average_wind = current) %>% 
+  select(aerodrome, name, average_wind)),
+  col.names = c("Aerodrome", "Name", "Average wind with gust, kts"),
+  digits = 1)
+```
+
+
+## Wind Speed Directional
+
+### Summary Statistics
+
+```{r}
+  wind_speed_hist <- lines %>% 
+      filter(variable %in% c("wind_north", "wind_east")) %>%
+      filter(!is.na(current)) %>%
+      group_by(current) %>%
+      summarize(count=sum(count)) %>%
+      ungroup()
+```
+
+Northerly and easterly wind components are forecast at an average of
+`r sprintf("%.1f", weighted.mean(abs(wind_speed_hist$current), wind_speed_hist$count))`
+knots. Patterns are as for wind speed:
+
+```{r}
+ print(
+   ggplot(wind_speed_hist, aes(x=abs(current))) + 
+     geom_histogram(aes(weight=count), binwidth = 1) +
+     labs(title="Histogram of Wind Speed Components", x="Wind Speed Component kts", y="Count") +
+     coord_cartesian(xlim=c(0,50)) +
+     theme_bw()
+   )
+```
+
+```{r}
+ print(
+   ggplot(wind_speed_hist %>% filter(current >= 10), aes(x=current)) + 
+     geom_histogram(aes(weight=count), binwidth = 1) +
+     labs(title="Histogram of Wind Speed Components", x="Wind Speed Component kts", y="Count") +
+     scale_y_log10() +
+     theme_bw()
+   )
+```
+
+## Lowest Cloud Layer
+
+## Ceiling
+
+## Visibility
+
