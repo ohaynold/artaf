@@ -21,7 +21,7 @@ number-sections: true
 number-depth: 3
 font-size: 10
 params:
-  data_set: "tiny_data"
+  data_set: "full_set"
 tbl-cap-location: bottom
 ---
 
@@ -242,7 +242,7 @@ print(
 {{< pagebreak >}}
 ##### By location
 
-We break down the tendency of changes in predicted wind speed to revert by aerodrome. We see a cluster of a high reversionary tendency of increases in predicted wind speed to get reverted and a low tendency of decreases in predicted wind speed to get reverted in the Deep South. The opposite appears in the wind corridor from the Dakotas to Texas:
+We break down the tendency of changes in predicted wind speed to revert by aerodrome. We see some geographic clusters, though their meaning is not immediately obvious.
 
 ```{r wind_speed_autocorr_aerodrome_increase}
 #| fig-cap: Reversion of Increases in Predicted Wind Speed by Aerodrome
@@ -258,7 +258,7 @@ wind_speed_autocorr_aerodrome <- lines %>%
   mutate(change_increase=pmax(change_from_previous, 0),
          change_decrease=pmin(change_from_previous, 0)) %>%
   nest_by(aerodrome) %>%
-  mutate(fitAerodrome = list(lm(change_to_final ~ change_increase + change_decrease + 0, data = data))) %>%
+  mutate(fitAerodrome = list(lm(change_to_final ~ change_increase + change_decrease + 0,weights = count,  data = data))) %>%
   reframe(tidy(fitAerodrome)) %>%
   left_join(stations, by=c("aerodrome")) %>%
   filter(substr(aerodrome, 1, 1)=="K" | substr(aerodrome, 1, 2)=="PA" | substr(aerodrome, 1, 2)=="PH") 
@@ -288,7 +288,7 @@ plot_usmap(fill="grey") +
 {{< pagebreak >}}
 #### Reversion of predicted increases vs. decreases
 
-The geographical distribution of reversionary tendencies in the increases and decreases of predicted wind speeds suggests that these might be anticorrelated. This is indeed true:
+We do not see much correlation between reversionary tendencies for increases and decreases in predicted wind speed.
 
 ```{r wind_speed_autocorr_aerodrome_increase_decrease}
 #| fig-cap: Reversion of predicted decrease vs. increase of wind speed by aerodrome
@@ -469,7 +469,7 @@ print(
 {{< pagebreak >}}
 ##### By location
 
-Again, as with wind speed without gust, the Deep South stands out for its large tendency for increases in predicted wind speed with gust to revert and a low tendency for reversion of decreases in the predicted wind speed with gust:
+There are some regional clusters for reversionary tendencies in predicted wind speed with gust, but their meaning is not immediately obvious.
 
 ```{r wind_speed_gust_autocorr_aerodrome_increase}
 #| fig-cap: Reversion of Increases in Predicted Wind Speed with Gust by Aerodrome
@@ -485,7 +485,7 @@ wind_speed_gust_autocorr_aerodrome <- lines %>%
   mutate(change_increase=pmax(change_from_previous, 0),
          change_decrease=pmin(change_from_previous, 0)) %>%
   nest_by(aerodrome) %>%
-  mutate(fitAerodrome = list(lm(change_to_final ~ change_increase + change_decrease + 0, data = data))) %>%
+  mutate(fitAerodrome = list(lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data = data))) %>%
   reframe(tidy(fitAerodrome)) %>%
   left_join(stations, by=c("aerodrome")) %>%
   filter(substr(aerodrome, 1, 1)=="K" | substr(aerodrome, 1, 2)=="PA" | substr(aerodrome, 1, 2)=="PH") 
@@ -516,7 +516,8 @@ plot_usmap(fill="grey") +
 {{< pagebreak >}}
 #### Reversion of predicted increases vs. decreases
 
-The geographical distribution of reversionary tendencies in the increases and decreases of predicted wind speeds suggests that these might be anticorrelated. This is indeed true:
+
+We do not see much correlation between reversionary tendencies for increases and decreases in predicted wind speed with gust.
 
 ```{r wind_speed_gust_autocorr_aerodrome_increase_decrease}
 #| fig-cap: Reversion of predicted decrease vs. increase of wind speed with gust by aerodrome
@@ -756,6 +757,144 @@ plot_usmap(fill="grey") +
   labs(title = "Mean Visibility by Location", colour="S. Miles")
 ```
 
+
+{{< pagebreak >}}
+### Autocorrelation
+
+##### Overall
+
+Since a change of visibility from 5 miles to 4.5 miles clearly is not the same as a change from 1 mile to 0.5 miles, we look at changes in the squre root of visibility.
+
+Improvements in predicted visibility do not tend to get revised, but decreases
+mostly get revised:
+
+```{r visibility_autocorr, warning=FALSE}
+#| fig-cap: Changes in predicted visibility vs. realization
+visibility_autocorr <- lines %>%
+  filter(variable=="visibility") %>%
+  mutate(change_from_previous=sqrt(current)-sqrt(previous), change_to_final=sqrt(final)-sqrt(current)) %>%
+  group_by(change_from_previous, change_to_final) %>%
+  summarise(count=sum(count), .groups="drop")
+
+
+print(
+  ggplot(visibility_autocorr, aes(x=factor(round(change_from_previous,1), levels=(-20:20)/10), y=change_to_final, weight=count)) +
+    geom_boxplot() +
+    theme_bw() +
+    labs(
+      title="Changes in predicted visibility vs. realization",
+      x="Change in predicted visibility, sqrt(knots)",
+         y="Change from prediction to final value, sqrt(knots)") +
+    geom_abline(slope=-0.1, intercept=2.1, linetype=4) +
+    scale_x_discrete(breaks=c(-2,-1,0,1,2), drop=FALSE)
+)
+
+```
+
+We see a significantly larger effect size for the reversion of decreases in predicted visbility than for increases:
+
+```{r visbility_autocorr_lm}
+visibility_autocorr <- visibility_autocorr %>%
+  mutate(change_increase=pmax(change_from_previous, 0),
+         change_decrease=pmin(change_from_previous, 0))
+
+visibility_lm <- lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data=visibility_autocorr)
+summary(visibility_lm)
+```
+{{< pagebreak >}}
+#### By year
+
+It appears that there is no significant change in autocorrelation patterns over the years:
+
+```{r visibility_autocorr_year, warning=FALSE}
+#| fig-cap: Changes in predicted visibility vs. realization by year
+#| fig-width: 10
+#| fig-height: 10
+visibility_autocorr_year <- lines %>%
+  filter(variable=="visibility") %>%
+  mutate(change_from_previous=sqrt(current)-sqrt(previous), change_to_final=sqrt(final)-sqrt(current)) %>%
+  group_by(year, change_from_previous, change_to_final) %>%
+  summarise(count=sum(count), .groups="drop")
+
+
+print(
+  ggplot(visibility_autocorr_year, aes(x=factor(round(change_from_previous,1), levels=(-20:20)/10), y=change_to_final, weight=count)) +
+    facet_wrap(~year) +
+    geom_boxplot(outliers = FALSE) +
+    theme_bw() +
+    labs(
+      title="Changes in predicted visibility vs. realization",
+      x="Change in predicted visibility, sqrt(knots)",
+         y="Change from prediction to final value, sqrt(knots)") +
+    geom_abline(slope=-0.1, intercept=2.1, linetype=4) +
+    scale_x_discrete(breaks=c(-2,-1,0,1,2), drop=FALSE)
+)
+```
+
+{{< pagebreak >}}
+##### By location
+
+We break down the tendency of changes in predicted visibility to revert by aerodrome. Again, there are regional clusters whose meaning is not immediately obvious.
+
+```{r visibility_autocorr_aerodrome_increase}
+#| fig-cap: Reversion of Increases in Predicted Visibility by Aerodrome
+#| fig-width: 5
+#| fig-height: 3
+
+visibility_autocorr_aerodrome <- lines %>%
+  filter(variable=="visibility") %>%
+  mutate(change_from_previous=sqrt(current)-sqrt(previous), change_to_final=sqrt(final)-sqrt(current)) %>%
+  filter(change_from_previous!=0) %>%
+  group_by(aerodrome, change_from_previous, change_to_final) %>%
+  summarise(count=sum(count), .groups="drop") %>%
+  mutate(change_increase=pmax(change_from_previous, 0),
+         change_decrease=pmin(change_from_previous, 0)) %>%
+  nest_by(aerodrome) %>%
+  mutate(fitAerodrome = list(lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data = data))) %>%
+  reframe(tidy(fitAerodrome)) %>%
+  left_join(stations, by=c("aerodrome")) %>%
+  filter(substr(aerodrome, 1, 1)=="K" | substr(aerodrome, 1, 2)=="PA" | substr(aerodrome, 1, 2)=="PH") 
+
+plot_usmap(fill="grey") +
+  geom_sf(data=usmap_transform(visibility_autocorr_aerodrome %>% filter(term=="change_increase"), input_names = c("longitude", "latitude")),
+             aes(colour=-estimate)) +
+  scale_colour_gradientn(colours = heat.colors(10)) +
+  labs(title = "Reversion of Increases in Predicted Visibility", colour="Reversion")
+
+```
+
+```{r visibility_autocorr_aerodrome_decrease}
+#| fig-cap: Reversion of Decreases in Predicted Visibility by Aerodrome
+#| fig-width: 5
+#| fig-height: 3
+
+
+plot_usmap(fill="grey") +
+  geom_sf(data=usmap_transform(visibility_autocorr_aerodrome %>% filter(term=="change_decrease"), input_names = c("longitude", "latitude")),
+             aes(colour=-estimate)) +
+  scale_colour_gradientn(colours = heat.colors(10)) +
+  labs(title = "Reversion of Decreases in Predicted Visibility", colour="Reversion")
+```
+{{< pagebreak >}}
+#### Reversion of predicted increases vs. decreases
+
+For visibility, it appears there is indeed an anticorrelation between reversionary tendencies in changes to increases *vs.* decreases in predicted visibility.
+
+```{r visibility_autocorr_aerodrome_increase_decrease}
+#| fig-cap: Reversion of predicted decrease vs. increase of visibility by aerodrome
+
+ggplot(
+  visibility_autocorr_aerodrome %>%
+    select(aerodrome, term, estimate) %>%
+    pivot_wider(names_from = term, values_from = estimate),
+  aes(x=-change_increase, y=-change_decrease, label=aerodrome)) +
+  geom_text(size=I(2)) +
+  theme_bw() +
+  labs(title="Reversion of predicted decrease vs. increase of visibility by aerodrome",
+       x="Reversion of predicted increase",
+       y="Reversion of predicted decrease")
+
+```
 
 
 
