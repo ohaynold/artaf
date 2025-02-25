@@ -3,7 +3,10 @@ title: "Autoregressive Behavior of Aviation Weather Forecasts"
 author: "Oliver M. Haynold & Neal Ylitalo"
 date: "`r Sys.Date()`"
 output: pdf_document
-format: pdf
+format:
+  pdf:
+    fig-width: 7
+    fig-height: 4.5
 crossref:
   fig-title: Figure
   fig-prefix: Figure
@@ -15,6 +18,8 @@ toc: true
 lof: true
 lot: true
 number-sections: true
+number-depth: 3
+font-size: 10
 params:
   data_set: "tiny_data"
 tbl-cap-location: bottom
@@ -28,6 +33,8 @@ library(ggplot2)
 library(usmap)
 library(palettes)
 library(knitr)
+library(tidyr)
+library(broom)
 
 # renv::snapshot()
 
@@ -87,6 +94,8 @@ TODO
       ungroup()
 ```
 
+##### Histogram
+
 Wind speeds are forecast at an average of
 `r sprintf("%.1f", weighted.mean(wind_speed_hist$current, wind_speed_hist$count))`
 knots.
@@ -101,6 +110,9 @@ knots.
      theme_bw()
    )
 ```
+
+{{< pagebreak >}}
+##### Extreme values
 
 For wind speeds exceeding 10 knots, we see an exponential decay in their frequency 
 of being forecast, albeit with a distinct clustering around round numbers. However,
@@ -117,6 +129,9 @@ that relationship breaks down for the very small number of predictions exceeding
      theme_bw()
    )
 ```
+
+{{< pagebreak >}}
+##### By location
 
 By station location, we see the well-known wind corridor from the Dakotas to West Texas.
 
@@ -151,9 +166,153 @@ kable(head(
   digits = 1)
 ```
 
+{{< pagebreak >}}
+### Autocorrelation
+
+##### Overall
+
+Reductions in predicted wind speeds do not tend to get revised, but increases
+mostly get revised:
+
+```{r wind_speed_autocorr, warning=FALSE}
+#| fig-cap: Changes in predicted wind speed vs. realization
+wind_speed_autocorr <- lines %>%
+  filter(variable=="wind_speed") %>%
+  filter(previous <= 30, current <= 30, final <= 30) %>%
+  mutate(change_from_previous=current-previous, change_to_final=final-current) %>%
+  group_by(change_from_previous, change_to_final) %>%
+  summarise(count=sum(count), .groups="drop")
+
+
+print(
+  ggplot(wind_speed_autocorr, aes(x=factor(change_from_previous, levels=-30:30), y=change_to_final, weight=count)) +
+    geom_boxplot() +
+    theme_bw() +
+    labs(
+      title="Changes in predicted wind speed vs. realization",
+      x="Change in predicted wind speed, knots",
+         y="Change from prediction to final value, knots") +
+    geom_abline(slope=-1, intercept=31, linetype=4) +
+    scale_x_discrete(breaks=c(-30,-25,-20,-15,-10,-5,0,5,10,15,20,25,30), drop=FALSE)
+)
+
+```
+
+We see a significantly larger effect size for the reversion of increases in predicted wind speeds than for decreases:
+
+```{r wind_speed_autocorr_lm}
+wind_speed_autocorr <- wind_speed_autocorr %>%
+  mutate(change_increase=pmax(change_from_previous, 0),
+         change_decrease=pmin(change_from_previous, 0))
+
+wind_speed_lm <- lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data=wind_speed_autocorr)
+summary(wind_speed_lm)
+```
+{{< pagebreak >}}
+#### By year
+
+It appears that there is no significant change in autocorrelation patterns over the years:
+
+```{r wind_speed_autocorr_year, warning=FALSE}
+#| fig-cap: Changes in predicted wind speed vs. realization by year
+#| fig-width: 10
+#| fig-height: 10
+wind_speed_autocorr_year <- lines %>%
+  filter(variable=="wind_speed") %>%
+  filter(previous <= 30, current <= 30, final <= 30) %>%
+  mutate(change_from_previous=current-previous, change_to_final=final-current) %>%
+  group_by(year, change_from_previous, change_to_final) %>%
+  summarise(count=sum(count), .groups="drop")
+
+
+print(
+  ggplot(wind_speed_autocorr_year, aes(x=factor(change_from_previous, levels=-30:30), y=change_to_final, weight=count)) +
+    facet_wrap(~year) +
+    geom_boxplot(outliers = FALSE) +
+    theme_bw() +
+    labs(
+      title="Changes in predicted wind speed vs. realization",
+      x="Change in predicted wind speed, knots",
+         y="Change from prediction to final value, knots") +
+    geom_abline(slope=-1, intercept=31, linetype=4) +
+    scale_x_discrete(breaks=c(-30,-20,-10,0,10,20,30), drop=FALSE)
+)
+```
+
+{{< pagebreak >}}
+##### By location
+
+We break down the tendency of changes in predicted wind speed to revert by aerodrome. We see a cluster of a high reversionary tendency of increases in predicted wind speed to get reverted and a low tendency of decreases in predicted wind speed to get reverted in the Deep South. The opposite appears in the wind corridor from the Dakotas to Texas:
+
+```{r wind_speed_autocorr_aerodrome_increase}
+#| fig-cap: Reversion of Increases in Predicted Wind Speed by Aerodrome
+#| fig-width: 5
+#| fig-height: 3
+
+wind_speed_autocorr_aerodrome <- lines %>%
+  filter(variable=="wind_speed") %>%
+  filter(previous <= 30, current <= 30, final <= 30) %>%
+  mutate(change_from_previous=current-previous, change_to_final=final-current) %>%
+  group_by(aerodrome, change_from_previous, change_to_final) %>%
+  summarise(count=sum(count), .groups="drop") %>%
+  mutate(change_increase=pmax(change_from_previous, 0),
+         change_decrease=pmin(change_from_previous, 0)) %>%
+  nest_by(aerodrome) %>%
+  mutate(fitAerodrome = list(lm(change_to_final ~ change_increase + change_decrease + 0, data = data))) %>%
+  reframe(tidy(fitAerodrome)) %>%
+  left_join(stations, by=c("aerodrome")) %>%
+  filter(substr(aerodrome, 1, 1)=="K" | substr(aerodrome, 1, 2)=="PA" | substr(aerodrome, 1, 2)=="PH") 
+
+plot_usmap(fill="grey") +
+  geom_sf(data=usmap_transform(wind_speed_autocorr_aerodrome %>% filter(term=="change_increase"), input_names = c("longitude", "latitude")),
+             aes(colour=-estimate)) +
+  scale_colour_gradientn(colours = heat.colors(10)) +
+  labs(title = "Reversion of Increases in Predicted Wind Speed", colour="Reversion")
+
+```
+
+```{r wind_speed_autocorr_aerodrome_decrease}
+#| fig-cap: Reversion of Decreases in Predicted Wind Speed by Aerodrome
+#| fig-width: 5
+#| fig-height: 3
+
+
+plot_usmap(fill="grey") +
+  geom_sf(data=usmap_transform(wind_speed_autocorr_aerodrome %>% filter(term=="change_decrease"), input_names = c("longitude", "latitude")),
+             aes(colour=-estimate)) +
+  scale_colour_gradientn(colours = heat.colors(10)) +
+  labs(title = "Reversion of Decreases in Predicted Wind Speed", colour="Reversion")
+
+
+```
+{{< pagebreak >}}
+#### Reversion of predicted increases vs. decreases
+
+The geographical distribution of reversionary tendencies in the increases and decreases of predicted wind speeds suggests that these might be anticorrelated. This is indeed true:
+
+```{r wind_speed_autocorr_aerodrome_increase_decrease}
+#| fig-cap: Reversion of predicted decrease vs. increase of wind speed by aerodrome
+
+ggplot(
+  wind_speed_autocorr_aerodrome %>%
+    select(aerodrome, term, estimate) %>%
+    pivot_wider(names_from = term, values_from = estimate),
+  aes(x=-change_increase, y=-change_decrease, label=aerodrome)) +
+  geom_text(size=I(2)) +
+  theme_bw() +
+  labs(title="Reversion of predicted decrease vs. increase of wind speed by aerodrome",
+       x="Reversion of predicted increase",
+       y="Reversion of predicted decrease")
+
+```
+
+
+{{< pagebreak >}}
 ## Wind Speed with Gusts
 
 ### Summary Statistics
+
+#### Histogram
 
 ```{r load_wind_speed_gust}
   wind_speed_gust_hist <- lines %>% 
@@ -182,6 +341,10 @@ decay interrupted between 13 and 25 knots, the proceeding as expected from 25 kn
    )
 ```
 
+{{< pagebreak >}}
+#### Extreme values
+
+
 ```{r wind_speed_gust_hist_log, warning=FALSE}
 #| fig-cap: Histogram of Wind Speeds, log scale
  print(
@@ -192,6 +355,10 @@ decay interrupted between 13 and 25 knots, the proceeding as expected from 25 kn
      theme_bw()
    )
 ```
+
+{{< pagebreak >}}
+##### By location
+
 The geographical distribution is as expected.
 
 ```{r wind_speed_gust_map}
@@ -226,7 +393,150 @@ kable(head(
   digits = 1)
 ```
 
+{{< pagebreak >}}
+### Autocorrelation
 
+##### Overall
+
+Reductions in predicted wind speeds do not tend to get revised, but increases
+mostly get revised:
+
+```{r wind_speed_gust_autocorr, warning=FALSE}
+#| fig-cap: Changes in predicted wind speed vs. realization
+wind_speed_gust_autocorr <- lines %>%
+  filter(variable=="wind_speed_with_gust") %>%
+  filter(previous <= 30, current <= 30, final <= 30) %>%
+  mutate(change_from_previous=current-previous, change_to_final=final-current) %>%
+  group_by(change_from_previous, change_to_final) %>%
+  summarise(count=sum(count), .groups="drop")
+
+
+print(
+  ggplot(wind_speed_gust_autocorr, aes(x=factor(change_from_previous, levels=-30:30), y=change_to_final, weight=count)) +
+    geom_boxplot() +
+    theme_bw() +
+    labs(
+      title="Changes in predicted wind speed with gust vs. realization",
+      x="Change in predicted wind speed with gust, knots",
+         y="Change from prediction to final value, knots") +
+    geom_abline(slope=-1, intercept=31, linetype=4) +
+    scale_x_discrete(breaks=c(-30,-25,-20,-15,-10,-5,0,5,10,15,20,25,30), drop=FALSE)
+)
+
+```
+
+We see a significantly larger effect size for the reversion of increases in predicted wind speeds than for decreases:
+
+```{r wind_speed_gust_autocorr_lm}
+wind_speed_gust_autocorr <- wind_speed_gust_autocorr %>%
+  mutate(change_increase=pmax(change_from_previous, 0),
+         change_decrease=pmin(change_from_previous, 0))
+
+wind_speed_gust_lm <- lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data=wind_speed_gust_autocorr)
+summary(wind_speed_gust_lm)
+```
+{{< pagebreak >}}
+#### By year
+
+It appears that there is no significant change in autocorrelation patterns over the years:
+
+```{r wind_speed_gust_autocorr_year, warning=FALSE}
+#| fig-cap: Changes in predicted wind speed with gust vs. realization by year
+#| fig-width: 10
+#| fig-height: 10
+wind_speed_gust_autocorr_year <- lines %>%
+  filter(variable=="wind_speed_with_gust") %>%
+  filter(previous <= 30, current <= 30, final <= 30) %>%
+  mutate(change_from_previous=current-previous, change_to_final=final-current) %>%
+  group_by(year, change_from_previous, change_to_final) %>%
+  summarise(count=sum(count), .groups="drop")
+
+
+print(
+  ggplot(wind_speed_gust_autocorr_year, aes(x=factor(change_from_previous, levels=-30:30), y=change_to_final, weight=count)) +
+    facet_wrap(~year) +
+    geom_boxplot(outliers = FALSE) +
+    theme_bw() +
+    labs(
+      title="Changes in predicted wind speed with gust vs. realization",
+      x="Change in predicted wind speed with gust, knots",
+         y="Change from prediction to final value, knots") +
+    geom_abline(slope=-1, intercept=31, linetype=4) +
+    scale_x_discrete(breaks=c(-30,-20,-10,0,10,20,30), drop=FALSE)
+)
+```
+
+{{< pagebreak >}}
+##### By location
+
+Again, as with wind speed without gust, the Deep South stands out for its large tendency for increases in predicted wind speed with gust to revert and a low tendency for reversion of decreases in the predicted wind speed with gust:
+
+```{r wind_speed_gust_autocorr_aerodrome_increase}
+#| fig-cap: Reversion of Increases in Predicted Wind Speed with Gust by Aerodrome
+#| fig-width: 5
+#| fig-height: 3
+
+wind_speed_gust_autocorr_aerodrome <- lines %>%
+  filter(variable=="wind_speed_with_gust") %>%
+  filter(previous <= 30, current <= 30, final <= 30) %>%
+  mutate(change_from_previous=current-previous, change_to_final=final-current) %>%
+  group_by(aerodrome, change_from_previous, change_to_final) %>%
+  summarise(count=sum(count), .groups="drop") %>%
+  mutate(change_increase=pmax(change_from_previous, 0),
+         change_decrease=pmin(change_from_previous, 0)) %>%
+  nest_by(aerodrome) %>%
+  mutate(fitAerodrome = list(lm(change_to_final ~ change_increase + change_decrease + 0, data = data))) %>%
+  reframe(tidy(fitAerodrome)) %>%
+  left_join(stations, by=c("aerodrome")) %>%
+  filter(substr(aerodrome, 1, 1)=="K" | substr(aerodrome, 1, 2)=="PA" | substr(aerodrome, 1, 2)=="PH") 
+
+plot_usmap(fill="grey") +
+  geom_sf(data=usmap_transform(wind_speed_gust_autocorr_aerodrome %>% filter(term=="change_increase"), input_names = c("longitude", "latitude")),
+             aes(colour=-estimate)) +
+  scale_colour_gradientn(colours = heat.colors(10)) +
+  labs(title = "Reversion of Increases in Predicted Wind Speed with Gust", colour="Reversion")
+
+```
+
+```{r wind_speed_gust_autocorr_aerodrome_decrease}
+#| fig-cap: Reversion of Decreases in Predicted Wind Speed by Aerodrome
+#| fig-width: 5
+#| fig-height: 3
+
+
+plot_usmap(fill="grey") +
+  geom_sf(data=usmap_transform(wind_speed_gust_autocorr_aerodrome %>% filter(term=="change_decrease"), input_names = c("longitude", "latitude")),
+             aes(colour=-estimate)) +
+  scale_colour_gradientn(colours = heat.colors(10)) +
+  labs(title = "Reversion of Decreases in Predicted Wind Speed with Gust", colour="Reversion")
+
+
+```
+
+{{< pagebreak >}}
+#### Reversion of predicted increases vs. decreases
+
+The geographical distribution of reversionary tendencies in the increases and decreases of predicted wind speeds suggests that these might be anticorrelated. This is indeed true:
+
+```{r wind_speed_gust_autocorr_aerodrome_increase_decrease}
+#| fig-cap: Reversion of predicted decrease vs. increase of wind speed with gust by aerodrome
+
+ggplot(
+  wind_speed_gust_autocorr_aerodrome %>%
+    select(aerodrome, term, estimate) %>%
+    pivot_wider(names_from = term, values_from = estimate),
+  aes(x=-change_increase, y=-change_decrease, label=aerodrome)) +
+  geom_text(size=I(2)) +
+  theme_bw() +
+  labs(title="Reversion of predicted decrease vs. increase of wind speed with gust by aerodrome",
+       x="Reversion of predicted increase",
+       y="Reversion of predicted decrease")
+
+```
+
+
+
+{{< pagebreak >}}
 ## Wind Speed Directional
 
 ### Summary Statistics
@@ -266,6 +576,47 @@ knots. Patterns are as for wind speed:
    )
 ```
 
+{{< pagebreak >}}
+### Autocorrelation
+
+##### Overall
+
+Once we take wind direction into account and look at northerly and easterly components of wind speed, the pattern we have seen above of a distinction between increases and decreases in wind speed largely disappears and becomes more symmetrical. This is to be expected as directional wind speed has a sign.
+
+```{r wind_speed_directional_autocorr, warning=FALSE}
+#| fig-cap: Changes in predicted wind speed component vs. realization
+wind_speed_directional_autocorr <- lines %>%
+  filter(variable %in% c("wind_north", "wind_east")) %>%
+  filter(abs(previous) <= 30 & abs(current) <= 30 & abs(final) <= 30) %>%
+  mutate(change_from_previous=current-previous, change_to_final=final-current) %>%
+  filter(abs(change_from_previous) <= 30 & abs(change_to_final) <= 30 ) %>%
+  group_by(change_from_previous, change_to_final) %>%
+  summarise(count=sum(count), .groups="drop")
+
+
+print(
+  ggplot(wind_speed_directional_autocorr, aes(x=factor(change_from_previous, levels=-30:30), y=change_to_final, weight=count)) +
+    geom_boxplot() +
+    theme_bw() +
+    labs(
+      title="Changes in predicted wind speed component vs. realization",
+      x="Change in predicted wind speed component, knots",
+         y="Change from prediction to final value, knots") +
+    geom_abline(slope=-1, intercept=31, linetype=4) +
+    scale_x_discrete(breaks=c(-30,-25,-20,-15,-10,-5,0,5,10,15,20,25,30), drop=FALSE)
+)
+
+```
+
+Thus, our reversionary tendency also becomes weaker as we cannot meaningfully distinguish increases and decreases when we take direction into account:
+
+```{r wind_speed_directional_autocorr_lm}
+
+wind_speed_directional_lm <- lm(change_to_final ~ change_from_previous + 0, weights = count, data=wind_speed_directional_autocorr)
+summary(wind_speed_directional_lm)
+```
+
+{{< pagebreak >}}
 ## Lowest Cloud Layer
 
 ### Summary Statistics
@@ -312,7 +663,7 @@ plot_usmap(fill="grey") +
 ```
 
 
-
+{{< pagebreak >}}
 ## Ceiling
 
 
@@ -359,7 +710,7 @@ plot_usmap(fill="grey") +
 ```
 
 
-
+{{< pagebreak >}}
 ## Visibility
 
 ### Summary Statistics
