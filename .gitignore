@@ -234,3 +234,8 @@ data/TAF*
 test.R
 data/histograms
 output/tmp
+
+/.quarto/
+.current_data_set
+settings.json
+output

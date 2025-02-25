@@ -35,9 +35,10 @@ To set up the project, clone the repository. You will also need all of the follo
 1. A shell compatible with ``sh``
    - On Windows, you can use Git Bash [included with git](https://git-scm.com/downloads/win)
 2. [Python 3.10 or newer](https://www.python.org/downloads/)
-   - (or PyPy for a speed gain)
+   - (advanced use: PyPy for a speed gain)
 3. [R 4.4 or newer](https://cran.r-project.org/).
-4. To generate the output report (not yet fully implemented) in PDF, a common [(La)TeX](https://www.tug.org/texlive/) distribution. This is not required if you are content with HTML output.
+4. [Quarto 1.6 or newer](https://quarto.org/docs/get-started/).
+5. A common [(La)TeX](https://www.tug.org/texlive/) distribution. (Alternatively, you could change the output file format from PDF to another format.)
 
 On Debian or Debian-based GNU/Linux distributions, you may also need to first install the ``python3-venv`` package via your 
 package manager.
@@ -76,8 +77,6 @@ These configurations can be accessed with `--config`:
 You can add your own configurations to [config/config.yaml](config/config.yaml).
 
 ## Testing
-
-**This is still a work in progress, to be fleshed out during this week.**
 
 Then `./run_tests.sh` will run the various function tests we provide and create test results as well as a
 coverage report.

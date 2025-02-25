@@ -4,9 +4,24 @@ author: "Oliver M. Haynold & Neal Ylitalo"
 date: "`r Sys.Date()`"
 output: pdf_document
 format: pdf
+crossref:
+  fig-title: Figure
+  fig-prefix: Figure
+  fig-labels: arabic
+  appendix-title: "Appendix:"
+  appendix-delim: ":"
+  sec-prefix: ""
+toc: true
+lof: true
+lot: true
+number-sections: true
+params:
+  data_set: "tiny_data"
+tbl-cap-location: bottom
 ---
 
 ```{r setup, include=FALSE}
+library(spatstat)
 library(readr)
 library(dplyr)
 library(ggplot2)
@@ -14,11 +29,13 @@ library(usmap)
 library(palettes)
 library(knitr)
 
+# renv::snapshot()
+
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
-```{r}
-lines <- read_csv("../data/histograms/full_set/hist YearlyStations.csv.zip",
+```{r load_data}
+lines <- read_csv(file.path("../data/histograms/",params$data_set ,"/hist YearlyStations.csv.zip"),
                   col_types = cols(
                     aerodrome = "f",
                     year="i",
@@ -41,6 +58,7 @@ stations <- read_csv("../config/stations.csv",
               select(-center)
 ```
 
+`r if(params$data_set!="full_set"){paste("**This report has been generated for the incomplete data set ", params$data_set, ".**", sep="")}`
 
 
 # Research Problem
@@ -61,7 +79,7 @@ TODO
 
 ### Summary Statistics
 
-```{r}
+```{r load_wind_speed}
   wind_speed_hist <- lines %>% 
       filter(variable=="wind_speed") %>%
       group_by(current) %>%
@@ -73,7 +91,8 @@ Wind speeds are forecast at an average of
 `r sprintf("%.1f", weighted.mean(wind_speed_hist$current, wind_speed_hist$count))`
 knots.
 
-```{r}
+```{r wind_speed_hist}
+#| fig-cap: Histogram of Wind Speeds
  print(
    ggplot(wind_speed_hist, aes(x=current)) + 
      geom_histogram(aes(weight=count), binwidth = 1) +
@@ -87,7 +106,9 @@ For wind speeds exceeding 10 knots, we see an exponential decay in their frequen
 of being forecast, albeit with a distinct clustering around round numbers. However,
 that relationship breaks down for the very small number of predictions exceeding 50 knots.
 
-```{r}
+```{r wind_speed_hist_log, warning=FALSE}
+#| fig-cap: Histogram of Wind Speeds, log scale
+# Warning for zero counts giving negative infinity suppressed
  print(
    ggplot(wind_speed_hist %>% filter(current >= 10), aes(x=current)) + 
      geom_histogram(aes(weight=count), binwidth = 1) +
@@ -99,11 +120,12 @@ that relationship breaks down for the very small number of predictions exceeding
 
 By station location, we see the well-known wind corridor from the Dakotas to West Texas.
 
-```{r}
+```{r wind_speed_map}
+#| fig-cap: Average Wind Forecast Speed by Location
 wind_speed_avg <- lines %>% 
       filter(variable=="wind_speed") %>%
       group_by(aerodrome) %>%
-      summarize(current=mean(current)) %>%
+      summarize(current=weighted.mean(current, count)) %>%
       ungroup() %>%
       left_join(stations, by=c("aerodrome")) %>%
       filter(substr(aerodrome, 1, 1)=="K" | substr(aerodrome, 1, 2)=="PA" | substr(aerodrome, 1, 2)=="PH") 
@@ -118,7 +140,8 @@ plot_usmap(fill="grey") +
 
 The windiest airports, by prediction, are:
 
-```{r}
+```{r wind_speed_max_stations}
+#| tbl-cap: Aerodromes with the highest predicted average wind speeds
 kable(head(
   wind_speed_avg %>% 
   arrange(-current) %>% 
@@ -132,8 +155,8 @@ kable(head(
 
 ### Summary Statistics
 
-```{r}
-  wind_speed_hist <- lines %>% 
+```{r load_wind_speed_gust}
+  wind_speed_gust_hist <- lines %>% 
       filter(variable=="wind_speed_with_gust") %>%
       group_by(current) %>%
       summarize(count=sum(count)) %>%
@@ -141,16 +164,17 @@ kable(head(
 ```
 
 Wind speeds with gust are forecast at an average of
-`r sprintf("%.1f", weighted.mean(wind_speed_hist$current, wind_speed_hist$count))`
+`r sprintf("%.1f", weighted.mean(wind_speed_gust_hist$current, wind_speed_gust_hist$count))`
 knots.
 
 We see an interesting distribution of wind speeds with gust with the typical exponential
 decay interrupted between 13 and 25 knots, the proceeding as expected from 25 knots to
 70 knots, and ceasing there:
 
-```{r}
+```{r wind_speed_gust_hist}
+#| fig-cap: Histogram of Wind Speeds with Gust
  print(
-   ggplot(wind_speed_hist, aes(x=current)) + 
+   ggplot(wind_speed_gust_hist, aes(x=current)) + 
      geom_histogram(aes(weight=count), binwidth = 1) +
      labs(title="Histogram of Wind Speeds with Gust", x="Wind Speed with Gust kts", y="Count") +
      coord_cartesian(xlim=c(0,50)) +
@@ -158,9 +182,10 @@ decay interrupted between 13 and 25 knots, the proceeding as expected from 25 kn
    )
 ```
 
-```{r}
+```{r wind_speed_gust_hist_log, warning=FALSE}
+#| fig-cap: Histogram of Wind Speeds, log scale
  print(
-   ggplot(wind_speed_hist %>% filter(current >= 10), aes(x=current)) + 
+   ggplot(wind_speed_gust_hist %>% filter(current >= 10), aes(x=current)) + 
      geom_histogram(aes(weight=count), binwidth = 1) +
      labs(title="Histogram of Wind Speeds with Gust", x="Wind Speed with Gust kts", y="Count") +
      scale_y_log10() +
@@ -169,29 +194,31 @@ decay interrupted between 13 and 25 knots, the proceeding as expected from 25 kn
 ```
 The geographical distribution is as expected.
 
-```{r}
-wind_speed_avg <- lines %>% 
+```{r wind_speed_gust_map}
+#| fig-cap: Average Wind Forecast Speed with Gust by Location
+wind_speed_gust_avg <- lines %>% 
       filter(variable=="wind_speed_with_gust") %>%
       group_by(aerodrome) %>%
-      summarize(current=mean(current)) %>%
+      summarize(current=weighted.mean(current, count)) %>%
       ungroup() %>%
       left_join(stations, by=c("aerodrome")) %>%
       filter(substr(aerodrome, 1, 1)=="K" | substr(aerodrome, 1, 2)=="PA" | substr(aerodrome, 1, 2)=="PH") 
 
 
 plot_usmap(fill="grey") +
-  geom_sf(data=usmap_transform(wind_speed_avg, input_names = c("longitude", "latitude")),
+  geom_sf(data=usmap_transform(wind_speed_gust_avg, input_names = c("longitude", "latitude")),
              aes(colour=current)) +
   scale_colour_gradientn(colours = heat.colors(10)) +
   labs(title = "Average Wind Forecast Speed with Gust by Location", colour="Knots")
 ```
 
 
-The windiest airports, by prediction, are:
+The windiest airports for winds including gusts, by prediction, are:
 
-```{r}
+```{r wind_speed_gust_max_stations}
+#| tbl-cap: Aerodromes with the highest predicted average wind speeds with gust
 kable(head(
-  wind_speed_avg %>% 
+  wind_speed_gust_avg %>% 
   arrange(-current) %>% 
   rename(average_wind = current) %>% 
   select(aerodrome, name, average_wind)),
@@ -204,8 +231,8 @@ kable(head(
 
 ### Summary Statistics
 
-```{r}
-  wind_speed_hist <- lines %>% 
+```{r load_wind_speed_directional}
+  wind_speed_directional_hist <- lines %>% 
       filter(variable %in% c("wind_north", "wind_east")) %>%
       filter(!is.na(current)) %>%
       group_by(current) %>%
@@ -214,12 +241,13 @@ kable(head(
 ```
 
 Northerly and easterly wind components are forecast at an average of
-`r sprintf("%.1f", weighted.mean(abs(wind_speed_hist$current), wind_speed_hist$count))`
+`r sprintf("%.1f", weighted.mean(abs(wind_speed_directional_hist$current), wind_speed_directional_hist$count))`
 knots. Patterns are as for wind speed:
 
-```{r}
+```{r wind_speed_directional_hist}
+#| fig-cap: Histogram of Wind Speed Components
  print(
-   ggplot(wind_speed_hist, aes(x=abs(current))) + 
+   ggplot(wind_speed_directional_hist, aes(x=abs(current))) + 
      geom_histogram(aes(weight=count), binwidth = 1) +
      labs(title="Histogram of Wind Speed Components", x="Wind Speed Component kts", y="Count") +
      coord_cartesian(xlim=c(0,50)) +
@@ -227,9 +255,10 @@ knots. Patterns are as for wind speed:
    )
 ```
 
-```{r}
+```{r wind_speed_directional_hist_log, warning=FALSE}
+#| fig-cap: Histogram of Wind Speed Components, log scale
  print(
-   ggplot(wind_speed_hist %>% filter(current >= 10), aes(x=current)) + 
+   ggplot(wind_speed_directional_hist %>% filter(current >= 10), aes(x=current)) + 
      geom_histogram(aes(weight=count), binwidth = 1) +
      labs(title="Histogram of Wind Speed Components", x="Wind Speed Component kts", y="Count") +
      scale_y_log10() +
@@ -239,7 +268,143 @@ knots. Patterns are as for wind speed:
 
 ## Lowest Cloud Layer
 
+### Summary Statistics
+
+```{r load_clouds_lowest}
+  clouds_lowest_hist <- lines %>% 
+      filter(variable == "clouds_lowest_base") %>%
+      filter(!is.na(current)) %>%
+      group_by(current) %>%
+      summarize(count=sum(count)) %>%
+      ungroup()
+```
+
+For the base of the lowest cloud layer, we see a mode for no clouds below 18,000 feet, which we show as 18,000 even for clear skies. Below that, we see a decline of prediction frequency with increasing altitude, with peaks at the round numbers of 10,000 feet and 15,000 feet.
+
+```{r clouds_lowest_hist}
+#| fig-cap: Histogram of Lowest Cloud Layer Base
+ print(
+   ggplot(clouds_lowest_hist, aes(x=abs(current))) + 
+     geom_histogram(aes(weight=count), breaks=(-1:18) * 1000 + 500) +
+     labs(title="Histogram of lowest cloud layer base", x="Lowest Cloud Layer Base, feet", y="Count") +
+     theme_bw()
+   )
+```
+
+In the geographic distribution, we are seeing a distinct cluster of few low clouds in the sunny Southwest. We are showing the median instead of the average since the top value of 18,000 that is also taken for clear skies is an arbitrary choice.
+
+```{r clouds_lowest_map}
+#| fig-cap: Median Cloud Altitude by Location
+clouds_lowest_median <- lines %>% 
+      filter(variable=="clouds_lowest_base") %>%
+      group_by(aerodrome) %>%
+      summarize(current=weighted.median(current, count)) %>%
+      ungroup() %>%
+      left_join(stations, by=c("aerodrome")) %>%
+      filter(substr(aerodrome, 1, 1)=="K" | substr(aerodrome, 1, 2)=="PA" | substr(aerodrome, 1, 2)=="PH") 
+
+
+plot_usmap(fill="grey") +
+  geom_sf(data=usmap_transform(clouds_lowest_median, input_names = c("longitude", "latitude")),
+             aes(colour=current)) +
+  scale_colour_gradientn(colours = topo.colors(30)) +
+  labs(title = "Median Lowest Cloud Layer Base by Location", colour="Feet")
+```
+
+
+
 ## Ceiling
 
+
+### Summary Statistics
+
+```{r load_clouds_ceiling}
+  clouds_ceiling_hist <- lines %>% 
+      filter(variable == "clouds_ceiling") %>%
+      filter(!is.na(current)) %>%
+      group_by(current) %>%
+      summarize(count=sum(count)) %>%
+      ungroup()
+```
+
+For the ceiling, the pattern from the lowest cloud base repeats:
+
+```{r clouds_ceiling_hist}
+#| fig-cap: Histogram of Cloud Ceiling
+ print(
+   ggplot(clouds_ceiling_hist, aes(x=abs(current))) + 
+     geom_histogram(aes(weight=count), breaks=(-1:18) * 1000 + 500) +
+     labs(title="Histogram of cloud ceiling", x="Cloud Ceiling, feet", y="Count") +
+     theme_bw()
+   )
+```
+
+
+```{r clouds_ceiling_map}
+#| fig-cap: Cloud Ceiling by Location
+clouds_ceiling_median <- lines %>% 
+      filter(variable=="clouds_ceiling") %>%
+      group_by(aerodrome) %>%
+      summarize(current=weighted.median(current, count)) %>%
+      ungroup() %>%
+      left_join(stations, by=c("aerodrome")) %>%
+      filter(substr(aerodrome, 1, 1)=="K" | substr(aerodrome, 1, 2)=="PA" | substr(aerodrome, 1, 2)=="PH") 
+
+
+plot_usmap(fill="grey") +
+  geom_sf(data=usmap_transform(clouds_ceiling_median, input_names = c("longitude", "latitude")),
+             aes(colour=current)) +
+  scale_colour_gradientn(colours = topo.colors(30)) +
+  labs(title = "Median Cloud Ceiling by Location", colour="Feet")
+```
+
+
+
 ## Visibility
+
+### Summary Statistics
+
+```{r load_visibility}
+  visibility_hist <- lines %>% 
+      filter(variable == "visibility") %>%
+      filter(!is.na(current)) %>%
+      group_by(current) %>%
+      summarize(count=sum(count)) %>%
+      ungroup()
+```
+
+For visibility, six statute miles or better is by far the most predicted value:
+
+```{r visibility_hist}
+#| fig-cap: Histogram of Visibility
+ print(
+   ggplot(visibility_hist, aes(x=abs(current))) + 
+     geom_histogram(aes(weight=count), breaks = (-1:24) / 4 + 1/8) +
+     labs(title="Histogram of Visibility", x="Visibility, statute miles", y="Count") +
+     theme_bw()
+   )
+```
+
+In the geographic distribution, we are seeing a distinct cluster of few low clouds in the sunny Southwest. We are showing the median instead of the average since the top value of 18,000 that is also taken for clear skies is an arbitrary choice.
+
+```{r visibility_map}
+#| fig-cap: Visibility by Location
+visibility_median <- lines %>% 
+      filter(variable=="visibility") %>%
+      group_by(aerodrome) %>%
+      summarize(current=weighted.mean(current, count)) %>%
+      ungroup() %>%
+      left_join(stations, by=c("aerodrome")) %>%
+      filter(substr(aerodrome, 1, 1)=="K" | substr(aerodrome, 1, 2)=="PA" | substr(aerodrome, 1, 2)=="PH") 
+
+
+plot_usmap(fill="grey") +
+  geom_sf(data=usmap_transform(visibility_median, input_names = c("longitude", "latitude")),
+             aes(colour=current)) +
+  scale_colour_gradientn(colours = topo.colors(30)) +
+  labs(title = "Mean Visibility by Location", colour="S. Miles")
+```
+
+
+
 

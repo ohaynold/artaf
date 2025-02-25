@@ -82,7 +82,9 @@ def process_data():  # pragma: no cover
     processor.process(run_config.stations, run_config.year_from, run_config.year_to)
     print(f"\rProcessed {processor.processed_hours:,} station hours, encountered "
           f"{processor.processed_errors:,} errors...")
-    print("Done.")
+
+    with open(".current_data_set", "w", encoding="ascii") as current_data_set_file:
+        current_data_set_file.write(run_config.config_name)
 
     print("Success!")
 
