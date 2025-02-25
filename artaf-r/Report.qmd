@@ -23,6 +23,7 @@ font-size: 10
 params:
   data_set: "full_set"
 tbl-cap-location: bottom
+bibliography: bibliography.bibtex
 ---
 
 ```{r setup, include=FALSE}
@@ -68,9 +69,30 @@ stations <- read_csv("../config/stations.csv",
 `r if(params$data_set!="full_set"){paste("**This report has been generated for the incomplete data set ", params$data_set, ".**", sep="")}`
 
 
+Pilots rely on Terminal Aerodrome Forecasts or TAFs
+published typically every six hours for about 700 airports in the United States.[@ac0045H; @fcmh12019] Although these forecasts rely on
+computer models, they still involve significant human judgment and are prepared by meteorologists. In the verbal
+discussions accompanying the formal forecasts, the meteorologists sometimes make mention of "not yet" including or
+changing something they foresee since they're not certain enough yet to find doing so worthwhile.
+
+We want to see if we can find evidence of the meteorologists being too conservative or too
+aggressive in incorporating new information as it becomes available. That is to say, we'd like to see whether there is
+autoregressive behavior in changes of the forecast for the same
+parameter at the same time and place. Put simply, if the meteorologist makes his forecast worse than it was, is that
+reason to believe he'll make it even worse in the next update? (*E.g.*, if in the evening before I want to go flying,
+the forecast for 9 AM the next morning goes from a cloud base of 5000 ft to 4000 ft, is that reason to assume that by
+the morning, the forecast will be 3000 ft, in which case I'll probably stay home?)
+
+
 # Research Problem
 
 TODO
+
+@ward1968, @griffin1992, and @barberis1998 say forecasters underreact to new information, etc. pp. TODO
+
+@kahneman1973, @debondt1985, and @daniel1998 suggest they overreact. TODO
+
+@nordhaus1987, @coibion2012, and @timmerman2006 discuss serial autocorrelations in forecast innovations. TODO.
 
 # Analysis
 
@@ -924,5 +946,9 @@ ggplot(
 
 ```
 
+{{< pagebreak >}}
+# References
 
+::: {#refs}
+:::
 

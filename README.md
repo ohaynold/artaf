@@ -10,7 +10,7 @@
 # Purpose
 
 Pilots rely on [Terminal Aerodrome Forecasts](https://en.wikipedia.org/wiki/Terminal_aerodrome_forecast) or TAFs
-published typically every six hours for about 700 airports in the United States. AAlthough these forecasts rely on
+published typically every six hours for about 700 airports in the United States. Although these forecasts rely on
 computer models, they still involve significant human judgment and are prepared by meteorologists. In the verbal
 discussions accompanying the formal forecasts, the meteorologists sometimes make mention of "not yet" including or
 changing something they foresee since they're not certain enough yet to find doing so worthwhile.
