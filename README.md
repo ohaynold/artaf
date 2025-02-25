@@ -37,8 +37,9 @@ To set up the project, clone the repository. You will also need all of the follo
 2. [Python 3.10 or newer](https://www.python.org/downloads/)
    - (advanced use: PyPy for a speed gain)
 3. [R 4.4 or newer](https://cran.r-project.org/).
-4. [Quarto 1.6 or newer](https://quarto.org/docs/get-started/).
-5. A common [(La)TeX](https://www.tug.org/texlive/) distribution. (Alternatively, you could change the output file format from PDF to another format.)
+4. [Rtools 4.4 or newer](https://cran.r-project.org/bin/windows/Rtools/rtools44/rtools.html)
+5. [Quarto 1.6 or newer](https://quarto.org/docs/get-started/).
+6. A common [(La)TeX](https://www.tug.org/texlive/) distribution. (Alternatively, you could change the output file format from PDF to another format.)
 
 On Debian or Debian-based GNU/Linux distributions, you may also need to first install the ``python3-venv`` package via your 
 package manager.
