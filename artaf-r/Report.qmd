@@ -737,11 +737,11 @@ For visibility, six statute miles or better is by far the most predicted value:
    )
 ```
 
-In the geographic distribution, we are seeing a distinct cluster of few low clouds in the sunny Southwest. We are showing the median instead of the average since the top value of 18,000 that is also taken for clear skies is an arbitrary choice.
+In the geographic distribution, we are seeing good visibility out West.
 
 ```{r visibility_map}
 #| fig-cap: Visibility by Location
-visibility_median <- lines %>% 
+visibility_avg <- lines %>% 
       filter(variable=="visibility") %>%
       group_by(aerodrome) %>%
       summarize(current=weighted.mean(current, count)) %>%
@@ -751,10 +751,38 @@ visibility_median <- lines %>%
 
 
 plot_usmap(fill="grey") +
-  geom_sf(data=usmap_transform(visibility_median, input_names = c("longitude", "latitude")),
+  geom_sf(data=usmap_transform(visibility_avg, input_names = c("longitude", "latitude")),
              aes(colour=current)) +
   scale_colour_gradientn(colours = topo.colors(30)) +
   labs(title = "Mean Visibility by Location", colour="S. Miles")
+```
+
+The airports with the best visibility, by prediction (keeping in mind that the scale maxes out at 6, but not using the median since that would be just 6 for most aerodromes), are:
+
+```{r visibility_max_stations}
+#| tbl-cap: Aerodromes with the highest predicted visibility
+
+kable(head(
+  visibility_avg %>% 
+  arrange(-current) %>% 
+  rename(average_wind = current) %>% 
+  select(aerodrome, name, average_wind)),
+  col.names = c("Aerodrome", "Name", "Average visibility, sm"),
+  digits = 4)
+```
+
+The two airports in the contiguous United States with the lowest predicted visibility are both directly on the Pacific coast:
+
+```{r visibility_min_stations}
+#| tbl-cap: Aerodromes with the lowest predicted visibility
+
+kable(head(
+  visibility_avg %>% 
+  arrange(current) %>% 
+  rename(average_wind = current) %>% 
+  select(aerodrome, name, average_wind)),
+  col.names = c("Aerodrome", "Name", "Average visibility, sm"),
+  digits = 4)
 ```
 
 
@@ -783,8 +811,8 @@ print(
     theme_bw() +
     labs(
       title="Changes in predicted visibility vs. realization",
-      x="Change in predicted visibility, sqrt(knots)",
-         y="Change from prediction to final value, sqrt(knots)") +
+      x="Change in predicted visibility, sqrt(statute miles)",
+         y="Change from prediction to final value, sqrt(statute miles)") +
     geom_abline(slope=-0.1, intercept=2.1, linetype=4) +
     scale_x_discrete(breaks=c(-2,-1,0,1,2), drop=FALSE)
 )
@@ -824,8 +852,8 @@ print(
     theme_bw() +
     labs(
       title="Changes in predicted visibility vs. realization",
-      x="Change in predicted visibility, sqrt(knots)",
-         y="Change from prediction to final value, sqrt(knots)") +
+      x="Change in predicted visibility, sqrt(statute miles)",
+         y="Change from prediction to final value, sqrt(statute miles)") +
     geom_abline(slope=-0.1, intercept=2.1, linetype=4) +
     scale_x_discrete(breaks=c(-2,-1,0,1,2), drop=FALSE)
 )
