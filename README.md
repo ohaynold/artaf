@@ -81,3 +81,11 @@ You can add your own configurations to [config/config.yaml](config/config.yaml).
 
 Then `./run_tests.sh` will run the various function tests we provide and create test results as well as a
 coverage report.
+
+# Community participation
+
+## Bug reporting
+Report bugs via GitHub issues. Please provide a thorough description of what you were doing, your system information, and any error messages that you have.
+
+## Contributing
+Please contact the author(s) before submitting a pull request.
