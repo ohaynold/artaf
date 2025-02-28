@@ -685,6 +685,147 @@ plot_usmap(fill="grey") +
   labs(title = "Median Lowest Cloud Layer Base by Location", colour="Feet")
 ```
 
+{{< pagebreak >}}
+### Autocorrelation
+
+##### Overall
+
+Since a change of a cloud layer from 10,000 feet to 9,500 feet clearly is not the same as a change from 1,000 feet to 500 feet, we look at changes in the squre root of the altitude of the lowest cloud layer, taking clear skies or anything above 18,000 feet AGL as 18,000 feet.
+
+Predicted changes in cloud layer on the median don't tend to get revised, but if they do get revidsed it's most often a reversion, whether for predicted increases or decreases:
+
+```{r clouds_lowest_autocorr, warning=FALSE}
+#| fig-cap: Changes in predicted lowest cloud layer vs. realization
+clouds_lowest_autocorr <- lines %>%
+  filter(variable=="clouds_lowest_base") %>%
+  mutate(change_from_previous=sqrt(current)-sqrt(previous), change_to_final=sqrt(final)-sqrt(current)) %>%
+  group_by(change_from_previous, change_to_final) %>%
+  summarise(count=sum(count), .groups="drop")
+
+
+print(
+  ggplot(clouds_lowest_autocorr, aes(x=factor(round(change_from_previous,-1), levels=(-14:14)*10), y=change_to_final, weight=count)) +
+    geom_boxplot() +
+    theme_bw() +
+    labs(
+      title="Changes in predicted lowest cloud layer vs. realization",
+      x="Change in predicted lowest cloud base, sqrt(feet)",
+         y="Change from prediction to final value, sqrt(feet)") +
+    geom_abline(slope=-0.1, intercept=2.1, linetype=4) +
+    scale_x_discrete(breaks=c(-125,-100,-75,-50,-25,0,25,50,75,100,125), drop=FALSE)
+)
+
+```
+
+We see similar effect sizes for the reversion of increases and decreases of predicted lowest cloud layer:
+
+```{r clouds_lowest_autocorr_lm}
+clouds_lowest_autocorr <- clouds_lowest_autocorr %>%
+  mutate(change_increase=pmax(change_from_previous, 0),
+         change_decrease=pmin(change_from_previous, 0))
+
+clouds_lowest_lm <- lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data=clouds_lowest_autocorr)
+summary(clouds_lowest_lm)
+```
+{{< pagebreak >}}
+#### By year
+
+It appears that there is no significant change in autocorrelation patterns over the years:
+
+```{r clouds_lowest_autocorr_year, warning=FALSE}
+#| fig-cap: Changes in predicted lowest cloud layer vs. realization by year
+#| fig-width: 10
+#| fig-height: 10
+clouds_lowest_autocorr_year <- lines %>%
+  filter(variable=="clouds_lowest_base") %>%
+  mutate(change_from_previous=sqrt(current)-sqrt(previous), change_to_final=sqrt(final)-sqrt(current)) %>%
+  group_by(year, change_from_previous, change_to_final) %>%
+  summarise(count=sum(count), .groups="drop")
+
+
+print(
+  ggplot(clouds_lowest_autocorr_year, aes(x=factor(round(change_from_previous,-1), levels=(-14:14)*10), y=change_to_final, weight=count)) +
+    facet_wrap(~year) +
+    geom_boxplot(outliers = FALSE) +
+    theme_bw() +
+    labs(
+      title="Changes in predicted lowest cloud layer vs. realization",
+      x="Change in predicted lowest cloud base, sqrt(feet)",
+         y="Change from prediction to final value, sqrt(feet)") +
+    geom_abline(slope=-0.1, intercept=2.1, linetype=4) +
+    scale_x_discrete(breaks=c(-125,-100,-75,-50,-25,0,25,50,75,100,125), drop=FALSE)
+)
+```
+
+{{< pagebreak >}}
+##### By location
+
+We break down the tendency of changes in predicted visibility to revert by aerodrome. There in an interest West-to-East gradient in reversion of increases:
+
+```{r clouds_lowest_autocorr_aerodrome_increase}
+#| fig-cap: Reversion of Increases in Predicted Visibility by Aerodrome
+#| fig-width: 5
+#| fig-height: 3
+
+clouds_lowest_autocorr_aerodrome <- lines %>%
+  filter(variable=="clouds_lowest_base") %>%
+  mutate(change_from_previous=sqrt(current)-sqrt(previous), change_to_final=sqrt(final)-sqrt(current)) %>%
+  filter(change_from_previous!=0) %>%
+  group_by(aerodrome, change_from_previous, change_to_final) %>%
+  summarise(count=sum(count), .groups="drop") %>%
+  mutate(change_increase=pmax(change_from_previous, 0),
+         change_decrease=pmin(change_from_previous, 0)) %>%
+  nest_by(aerodrome) %>%
+  mutate(fitAerodrome = list(lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data = data))) %>%
+  reframe(tidy(fitAerodrome)) %>%
+  left_join(stations, by=c("aerodrome")) %>%
+  filter(substr(aerodrome, 1, 1)=="K" | substr(aerodrome, 1, 2)=="PA" | substr(aerodrome, 1, 2)=="PH") 
+
+plot_usmap(fill="grey") +
+  geom_sf(data=usmap_transform(clouds_lowest_autocorr_aerodrome %>% filter(term=="change_increase"), input_names = c("longitude", "latitude")),
+             aes(colour=-estimate)) +
+  scale_colour_gradientn(colours = heat.colors(10)) +
+  labs(title = "Reversion of Increases in Predicted Lowest Cloud Layer", colour="Reversion")
+
+```
+
+For reversion of decreases, Florida and the Gulf Coast together with Wyoming form an interesting cluster of lower tendency to revert:
+
+```{r clouds_lowest_autocorr_aerodrome_decrease}
+#| fig-cap: Reversion of Decreases in Predicted Visibility by Aerodrome
+#| fig-width: 5
+#| fig-height: 3
+
+
+plot_usmap(fill="grey") +
+  geom_sf(data=usmap_transform(clouds_lowest_autocorr_aerodrome %>% filter(term=="change_decrease"), input_names = c("longitude", "latitude")),
+             aes(colour=-estimate)) +
+  scale_colour_gradientn(colours = heat.colors(10)) +
+  labs(title = "Reversion of Decreases in Predicted Lowest Cloud Layer", colour="Reversion")
+```
+{{< pagebreak >}}
+#### Reversion of predicted increases vs. decreases
+
+It appears there is indeed an anticorrelation between reversionary tendencies in changes to increases *vs.* decreases in predicted lowest cloud layer.
+
+```{r clouds_lowest_autocorr_aerodrome_increase_decrease}
+#| fig-cap: Reversion of predicted decrease vs. increase of lowest cloud layer by aerodrome
+
+ggplot(
+  clouds_lowest_autocorr_aerodrome %>%
+    select(aerodrome, term, estimate) %>%
+    pivot_wider(names_from = term, values_from = estimate),
+  aes(x=-change_increase, y=-change_decrease, label=aerodrome)) +
+  geom_text(size=I(2)) +
+  theme_bw() +
+  labs(title="Reversion of predicted decrease vs. increase of lowest cloud layer by aerodrome",
+       x="Reversion of predicted increase",
+       y="Reversion of predicted decrease")
+
+```
+
+
+
 
 {{< pagebreak >}}
 ## Ceiling
@@ -731,6 +872,147 @@ plot_usmap(fill="grey") +
   scale_colour_gradientn(colours = topo.colors(30)) +
   labs(title = "Median Cloud Ceiling by Location", colour="Feet")
 ```
+
+
+{{< pagebreak >}}
+### Autocorrelation
+
+##### Overall
+
+Since a change of a cloud layer from 10,000 feet to 9,500 feet clearly is not the same as a change from 1,000 feet to 500 feet, we look at changes in the squre root of the altitude of the ceiling, taking clear skies or anything above 18,000 feet AGL as 18,000 feet.
+
+Predicted changes in ceiling on the median don't tend to get revised, but if they do get revised it's most often a reversion, whether for predicted increases or decreases:
+  
+```{r clouds_ceiling_autocorr, warning=FALSE}
+#| fig-cap: Changes in predicted ceiling cloud layer vs. realization
+clouds_ceiling_autocorr <- lines %>%
+  filter(variable=="clouds_ceiling") %>%
+  mutate(change_from_previous=sqrt(current)-sqrt(previous), change_to_final=sqrt(final)-sqrt(current)) %>%
+  group_by(change_from_previous, change_to_final) %>%
+  summarise(count=sum(count), .groups="drop")
+
+
+print(
+  ggplot(clouds_ceiling_autocorr, aes(x=factor(round(change_from_previous,-1), levels=(-14:14)*10), y=change_to_final, weight=count)) +
+    geom_boxplot() +
+    theme_bw() +
+    labs(
+      title="Changes in predicted ceiling cloud layer vs. realization",
+      x="Change in predicted ceiling cloud base, sqrt(feet)",
+      y="Change from prediction to final value, sqrt(feet)") +
+    geom_abline(slope=-0.1, intercept=2.1, linetype=4) +
+    scale_x_discrete(breaks=c(-125,-100,-75,-50,-25,0,25,50,75,100,125), drop=FALSE)
+)
+
+```
+
+For the ceiling, different from the lowest layer, we see somewhat of a tendency for decreases to revert more than increases do:
+  
+```{r clouds_ceiling_autocorr_lm}
+clouds_ceiling_autocorr <- clouds_ceiling_autocorr %>%
+  mutate(change_increase=pmax(change_from_previous, 0),
+         change_decrease=pmin(change_from_previous, 0))
+
+clouds_ceiling_lm <- lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data=clouds_ceiling_autocorr)
+summary(clouds_ceiling_lm)
+```
+{{< pagebreak >}}
+#### By year
+
+It appears that there is no significant change in autocorrelation patterns over the years:
+  
+```{r clouds_ceiling_autocorr_year, warning=FALSE}
+#| fig-cap: Changes in predicted ceiling cloud layer vs. realization by year
+#| fig-width: 10
+#| fig-height: 10
+clouds_ceiling_autocorr_year <- lines %>%
+  filter(variable=="clouds_ceiling") %>%
+  mutate(change_from_previous=sqrt(current)-sqrt(previous), change_to_final=sqrt(final)-sqrt(current)) %>%
+  group_by(year, change_from_previous, change_to_final) %>%
+  summarise(count=sum(count), .groups="drop")
+
+
+print(
+  ggplot(clouds_ceiling_autocorr_year, aes(x=factor(round(change_from_previous,-1), levels=(-14:14)*10), y=change_to_final, weight=count)) +
+    facet_wrap(~year) +
+    geom_boxplot(outliers = FALSE) +
+    theme_bw() +
+    labs(
+      title="Changes in predicted ceiling cloud layer vs. realization",
+      x="Change in predicted ceiling cloud base, sqrt(feet)",
+      y="Change from prediction to final value, sqrt(feet)") +
+    geom_abline(slope=-0.1, intercept=2.1, linetype=4) +
+    scale_x_discrete(breaks=c(-125,-100,-75,-50,-25,0,25,50,75,100,125), drop=FALSE)
+)
+```
+
+{{< pagebreak >}}
+##### By location
+
+We break down the tendency of changes in predicted ceiling to revert by aerodrome. In Florida, metropolitan California, West Texas, and Oklahoma we see clusters of an unusually low tendency of increases in predicted ceilings to revert:
+  
+```{r clouds_ceiling_autocorr_aerodrome_increase}
+#| fig-cap: Reversion of Increases in Predicted Visibility by Aerodrome
+#| fig-width: 5
+#| fig-height: 3
+
+clouds_ceiling_autocorr_aerodrome <- lines %>%
+  filter(variable=="clouds_ceiling") %>%
+  mutate(change_from_previous=sqrt(current)-sqrt(previous), change_to_final=sqrt(final)-sqrt(current)) %>%
+  filter(change_from_previous!=0) %>%
+  group_by(aerodrome, change_from_previous, change_to_final) %>%
+  summarise(count=sum(count), .groups="drop") %>%
+  mutate(change_increase=pmax(change_from_previous, 0),
+         change_decrease=pmin(change_from_previous, 0)) %>%
+  nest_by(aerodrome) %>%
+  mutate(fitAerodrome = list(lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data = data))) %>%
+  reframe(tidy(fitAerodrome)) %>%
+  left_join(stations, by=c("aerodrome")) %>%
+  filter(substr(aerodrome, 1, 1)=="K" | substr(aerodrome, 1, 2)=="PA" | substr(aerodrome, 1, 2)=="PH") 
+
+plot_usmap(fill="grey") +
+  geom_sf(data=usmap_transform(clouds_ceiling_autocorr_aerodrome %>% filter(term=="change_increase"), input_names = c("longitude", "latitude")),
+          aes(colour=-estimate)) +
+  scale_colour_gradientn(colours = heat.colors(10)) +
+  labs(title = "Reversion of Increases in Predicted Ceiling", colour="Reversion")
+
+```
+
+For reversion of decreases, we see a particular tendency for reversion in Dixieland and California:
+  
+```{r clouds_ceiling_autocorr_aerodrome_decrease}
+#| fig-cap: Reversion of Decreases in Predicted Visibility by Aerodrome
+#| fig-width: 5
+#| fig-height: 3
+
+
+plot_usmap(fill="grey") +
+  geom_sf(data=usmap_transform(clouds_ceiling_autocorr_aerodrome %>% filter(term=="change_decrease"), input_names = c("longitude", "latitude")),
+          aes(colour=-estimate)) +
+  scale_colour_gradientn(colours = heat.colors(10)) +
+  labs(title = "Reversion of Decreases in Predicted ceiling Cloud Layer", colour="Reversion")
+```
+{{< pagebreak >}}
+#### Reversion of predicted increases vs. decreases
+
+It appears there is an anticorrelation between reversionary tendencies in changes to increases *vs.* decreases in predicted ceiling.
+
+```{r clouds_ceiling_autocorr_aerodrome_increase_decrease}
+#| fig-cap: Reversion of predicted decrease vs. increase of ceiling cloud layer by aerodrome
+
+ggplot(
+  clouds_ceiling_autocorr_aerodrome %>%
+    select(aerodrome, term, estimate) %>%
+    pivot_wider(names_from = term, values_from = estimate),
+  aes(x=-change_increase, y=-change_decrease, label=aerodrome)) +
+  geom_text(size=I(2)) +
+  theme_bw() +
+  labs(title="Reversion of predicted decrease vs. increase of ceiling cloud layer by aerodrome",
+       x="Reversion of predicted increase",
+       y="Reversion of predicted decrease")
+
+```
+
 
 
 {{< pagebreak >}}
