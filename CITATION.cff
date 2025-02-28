@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+    - family-names: "Haynold"
+      given-names: "Oliver"
+      orcid: "https://orcid.org/0000-0002-5693-5978"
+    - family-names: "Ylitalo"
+      given-names: "Neal"
+      orcid: "https://orcid.org/0009-0003-0357-8916"
+title: "Autoregressive Behavior of Aviation Weather Forecasts"
+version: 1.0
+doi:
+date-released: 2025-03-04
+url: "https://github.com/ohaynold/artaf"
