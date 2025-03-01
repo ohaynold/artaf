@@ -1,4 +1,4 @@
-#!/usr/bin/env -S sh
+#!/usr/bin/env -S bash
 
 # This script runs the analysis in the logical order. It should be executed with the
 # project directory as the working directory.

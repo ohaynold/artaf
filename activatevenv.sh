@@ -8,7 +8,7 @@
 # https://stackoverflow.com/questions/43826134/why-is-the-bin-directory-named-differently-scripts-on-windows
 [[ -d "venv/Scripts" ]] && . venv/Scripts/activate
 
-if [[ $VIRTUAL_ENV_PROMPT != "venv" ]]; then
+if [[ $VIRTUAL_ENV != "$PWD/venv" ]]; then
     answer="a"
     while [[ "YyNn" != *"$answer"* ]] ; do
         read -r -p "No Python virtual environment loaded, try running install.sh first. Continue anyway? [y/N]: " answer

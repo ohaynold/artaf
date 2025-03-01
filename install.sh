@@ -1,4 +1,4 @@
-#!/usr/bin/env -S sh
+#!/usr/bin/env -S bash
 
 LOG_FILE="install.log"
 REQS_FILE="artaf-python/requirements.txt"
