@@ -24,6 +24,13 @@ params:
   data_set: "full_set"
 tbl-cap-location: bottom
 bibliography: bibliography.bibtex
+copyright:
+  holder: Oliver M. Haynold & Neal Ylitalo
+  year: 2025
+license:
+    text: This work is licensed under CC BY 4.0.
+    type: open-access
+    url: https://creativecommons.org/licenses/by/4.0/
 ---
 
 ```{r setup, include=FALSE}

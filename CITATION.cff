@@ -1,14 +1,42 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
+type: software
 authors:
     - family-names: "Haynold"
-      given-names: "Oliver"
+      given-names: "Oliver M."
       orcid: "https://orcid.org/0000-0002-5693-5978"
     - family-names: "Ylitalo"
       given-names: "Neal"
       orcid: "https://orcid.org/0009-0003-0357-8916"
-title: "Autoregressive Behavior of Aviation Weather Forecasts"
+title: "Autoregressive Behavior of Aviation Weather Forecasts (Software)"
 version: 1.0
-doi:
+doi: "10.5281/zenodo.14954562"
 date-released: 2025-03-04
 url: "https://github.com/ohaynold/artaf"
+license: "MIT"
+preferred-citation:
+    type: report
+    authors:
+        - family-names: "Haynold"
+          given-names: "Oliver M."
+          orcid: "https://orcid.org/0000-0002-5693-5978"
+        - family-names: "Ylitalo"
+          given-names: "Neal"
+          orcid: "https://orcid.org/0009-0003-0357-8916"
+    title: "Autoregressive Behavior of Aviation Weather Forecasts"
+    date-released: 2025-03-04
+    doi: "10.5281/zenodo.14954569"
+    license: "CC-BY-4.0"
+references:
+  -   type: data
+      authors:
+            - family-names: "Haynold"
+              given-names: "Oliver M."
+              orcid: "https://orcid.org/0000-0002-5693-5978"
+            - family-names: "Ylitalo"
+              given-names: "Neal"
+              orcid: "https://orcid.org/0009-0003-0357-8916"
+      title: "Terminal Aerodrome Forecasts from the United States (raw, by year and aerodrome)"
+      date-released: 2025-03-01
+      doi: "10.5281/zenodo.14954564"
+      license: "CC-PDDC"

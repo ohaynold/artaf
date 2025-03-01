@@ -12,4 +12,7 @@ echo "*** Running Python unit tests... ***"
 coverage run -m pytest
 coverage html
 
+echo "*** Checking the Citation ***"
+cffconvert --validate
+
 echo "*** Finished... ***"
