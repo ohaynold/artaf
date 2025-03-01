@@ -32,14 +32,26 @@ of the data](output/Statistics.md).
 
 To set up the project, clone the repository. You will also need all of the following: 
 
-1. A shell compatible with ``sh``
+1. A ``bash`` shell
    - On Windows, you can use Git Bash [included with git](https://git-scm.com/downloads/win)
 2. [Python 3.10 or newer](https://www.python.org/downloads/)
    - (advanced use: PyPy for a speed gain)
 3. [R 4.4 or newer](https://cran.r-project.org/).
 4. [Rtools 4.4 or newer](https://cran.r-project.org/bin/windows/Rtools/rtools44/rtools.html)
+   -  openssl dev package (required for compiling some R packages)
+      - deb: libssl-dev (Debian, Ubuntu, etc)
+      - rpm: openssl-devel (Fedora, CentOS, RHEL)
+      - brew: openssl@1.1 (Mac OSX)
+   - udunits2 dev package 
+      - deb: libudunits2-dev (Debian, Ubuntu, ...)
+      - rpm: udunits2-devel (Fedora, EPEL, ...)
+      - brew: udunits (OSX)
+   - GDAL dev package 
+     - deb: libgdal-dev (Debian, Ubuntu, etc.)
+
 5. [Quarto 1.6 or newer](https://quarto.org/docs/get-started/).
 6. A common [(La)TeX](https://www.tug.org/texlive/) distribution. (Alternatively, you could change the output file format from PDF to another format.)
+   - ``xelatex`` - provided in Debian by texlive-xetex
 
 On Debian or Debian-based GNU/Linux distributions, you may also need to first install the ``python3-venv`` package via your 
 package manager.
