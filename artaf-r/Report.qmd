@@ -3,12 +3,19 @@ title: "Autoregressive Behavior of Aviation Weather Forecasts"
 author: "Oliver M. Haynold & Neal Ylitalo"
 date: "`r Sys.Date()`"
 output: pdf_document
+keep_tex: true
+header-includes:
+   - \usepackage{booktabs}
+   - \usepackage{lipsum}
+   - \usepackage{fancyhdr}
+   - \pagestyle{fancy}
+   - \renewcommand{\headrulewidth}{0pt} 
+   - \fancyhead[L]{}
+   - \fancyhead[R]{DOI 10.5281/zenodo.14954569}
 format:
   pdf:
     fig-width: 7
     fig-height: 4.5
-header-includes:
-   - \usepackage{booktabs}
 crossref:
   fig-title: Figure
   fig-prefix: Figure
@@ -23,7 +30,7 @@ number-sections: true
 number-depth: 3
 font-size: 10
 params:
-  data_set: "full_set"
+  data_set: "tiny_data"
 tbl-cap-location: bottom
 bibliography: bibliography.bibtex
 copyright:
@@ -36,12 +43,21 @@ license:
 editor: 
   markdown: 
     wrap: 72
+abstract: >
+   We analyze U.S. Terminal Aerodrome Forecasts (TAFs) for autocorrelation of changes
+   in forecasts for a given aerodrome and hour between successive forecasts.
+   We find a pessimistic and overreacting bias. When forecasters adjust a TAF,
+   they tend to back out some of their changes in a later TAF. This tendency is
+   much more pronounced when forecasters worsen a forecast than when they improve it.
+keywords:
+  - "terminal aerodrome forecasts"
+  - "weather forecasting accuracy"
+  - "meteorological biases"
+  - "wet bias"
+  - "forecast revisions"
+citation:
+  doi: "10.5281/zenodo.14954569"
 ---
-
-Copyright © {{<meta copyright.year>}} by  {{<meta copyright.holder>}}. 
-
-{{<meta license.text>}} The full license is available at [{{<meta license.url>}}]({{<meta license.url>}}).
-
 
 ```{r setup, include=FALSE}
 library(spatstat)
@@ -59,6 +75,12 @@ library(broom)
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
+\fancyhead[L]{`r if(params$data_set!="full_set"){paste("\\textbf{Incomplete data set ", knitr:::escape_latex(params$data_set), "}", sep="")}`}
+ 
+Copyright © {{<meta copyright.year>}} by  {{<meta copyright.holder>}}. 
+
+{{<meta license.text>}} The full license is available at [{{<meta license.url>}}]({{<meta license.url>}}).
+
 ```{r load_data}
 lines <- read_csv(file.path("../data/histograms/",params$data_set ,"/hist YearlyStations.csv.zip"),
                   col_types = cols(
@@ -69,6 +91,12 @@ lines <- read_csv(file.path("../data/histograms/",params$data_set ,"/hist Yearly
                     current="n",
                     final="n",
                     count="i"
+                  ))
+
+processing_stats <- read_csv(file.path("../data/histograms/",params$data_set ,"/processing_stats.csv"),
+                  col_types = cols(
+                    statistic = "f",
+                    value="i",
                   ))
 
 stations <- read_csv("../config/stations.csv", 
@@ -84,8 +112,6 @@ stations <- read_csv("../config/stations.csv",
 ```
 
 {{< pagebreak >}}
-
-`r if(params$data_set!="full_set"){paste("**This report has been generated for the incomplete data set ", params$data_set, ".**", sep="")}`
 
 Pilots rely on Terminal Aerodrome Forecasts or TAFs published typically
 every six hours for about 700 airports in the United States.[@ac0045H;
@@ -129,7 +155,7 @@ While forecast biases have often been discussed in a context of alleged
 irrationality by the forecasters, we should note that there are
 perfectly plausible rational reasons for making biased forecasts. In the
 case of weather forecasts for dissemination to the general public, there
-is a well-documented bias toward predicting rain. [@bickel2008] This
+is a well-documented "wet bias" toward predicting rain. [@bickel2008] This
 bias can be quite drastic, such as with predictions of a 20% chance of
 rain only materializing in about 5% of cases. [@silver2012] One can
 easily hypothesize a plausible reason for such bias in what in
@@ -208,7 +234,17 @@ is available at [DOI 10.5281/zenodo.14954562](https://doi.org/10.5281/zenodo.149
 We ran our analysis for the `r sprintf("%d", dim(stations)[1])` aerodromes for which the National Weather Service
 published TAFs at the end of 2024. We built a downloader to obtain these TAFs from the archive at [Iowa State University's Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/) and made a data set from 1997 through 2024 available at [DOI 10.5281/zenodo.14954564](https://doi.org/10.5281/zenodo.14954564).The United States changed its TAF format as well as the forecast range on 5 November 2008. [@sc0846] In order to avoid a break in our data set from this change, we limit our analysis to the years from 2010 through 2024.
 
-TODO Parsing results
+We parsed `r format(processing_stats$value[processing_stats$statistic=="tafs_processed"], big.mark=",")` TAFs and encountered
+`r format(processing_stats$value[processing_stats$statistic=="errors"], big.mark=",")` errors. By the structure of our error reporting, one TAF
+may generate more than one error. Inspection of the error logs of unparsable
+TAFs shows that the problems are indeed with the TAFs. With an error rate this low, we did not attempt to engage in any further cleanup
+of TAFs with syntax errors and felt it safer to exclude these from our analysis.
+
+We also did not consider TEMPO and PROB elements in TAFs. PROB groups are not used for the first nine hours of a forecast, and after that
+only for thunderstorm events. [@ac0045H] This rule may introduce some reversionary tendencies since the PROB group has to disappear once it moves into
+the first nine hours, and since the PROB group is only used as a PROB30, it should more often than not be resolved into being taken out of
+the forecast. TEMPO groups are for events that cover less than half of their forecast period and for less than one hour. Since we structured our
+analysis in hourly intervals, we felt it safest to leave them out as well.
 
 ## Variables considered
 
