@@ -81,6 +81,9 @@ Copyright © {{<meta copyright.year>}} by  {{<meta copyright.holder>}}.
 
 {{<meta license.text>}} The full license is available at [{{<meta license.url>}}]({{<meta license.url>}}).
 
+This paper and the program code that makes it were written for the CAS 502: Fundamentals of Complex Systems Science: Computation
+course at Arizona State University in the Spring semester 2025.
+
 ```{r load_data}
 lines <- read_csv(file.path("../data/histograms/",params$data_set ,"/hist YearlyStations.csv.zip"),
                   col_types = cols(
