@@ -1,6 +1,8 @@
 ---
 title: "Autoregressive Behavior of Aviation Weather Forecasts"
-author: "Oliver M. Haynold & Neal Ylitalo"
+author:
+- Oliver M. Haynold
+- Neal Ylitalo
 date: "`r Sys.Date()`"
 output: pdf_document
 keep_tex: true
@@ -1092,6 +1094,244 @@ into account:
 wind_speed_directional_lm <- lm(change_to_final ~ change_from_previous + 0, weights = count, data=wind_speed_directional_autocorr)
 summary(wind_speed_directional_lm)
 ```
+
+{{< pagebreak >}} 
+
+## Gust Spread
+
+### Summary statistics
+
+#### Histogram
+
+```{r load_wind_gust_spread}
+  wind_gust_spread_hist <- lines %>% 
+      filter(variable=="wind_gust_spread") %>%
+      group_by(current) %>%
+      summarize(count=sum(count)) %>%
+      ungroup()
+```
+
+Gust spreads are forecast at an average of 
+`r sprintf("%.1f", weighted.mean(wind_gust_spread_hist$current, wind_gust_spread_hist$count))`
+knots. Of course, this is an understatement since gusts are only reported when they are significant.
+For predictions including gust larger than zero, the mean gust spread is 
+`r sprintf("%.1f", weighted.mean(wind_gust_spread_hist$current[wind_gust_spread_hist$current>0], wind_gust_spread_hist$count[wind_gust_spread_hist$current>0]))` knots.
+
+The distribution is as follows:
+
+```{r wind_gust_spread_hist}
+#| fig-cap: Histogram of gust spreads
+ print(
+   ggplot(wind_gust_spread_hist, aes(x=current)) + 
+     geom_histogram(aes(weight=count), binwidth = 1) +
+     labs(title="Histogram of Gust Spreads", x="Gust spread, knots", y="Count") +
+     coord_cartesian(xlim=c(0,50)) +
+     theme_bw()
+   )
+```
+
+{{< pagebreak >}} 
+
+#### Extreme values
+
+Again, we see an exponential decline of the frequency of the prediction of extreme values:
+
+```{r wind_gust_spread_hist_log, warning=FALSE}
+#| fig-cap: Histogram of gust spread, log scale
+ print(
+   ggplot(wind_gust_spread_hist %>% filter(current >= 5), aes(x=current)) + 
+     geom_histogram(aes(weight=count), binwidth = 1) +
+     labs(title="Histogram of Gust Spread", x="Gust spread, knots", y="Count") +
+     scale_y_log10() +
+     theme_bw()
+   )
+```
+
+{{< pagebreak >}} 
+
+##### By aerodrome
+
+The geographical distribution shows little predicted gust on the Pacific coast, other than in Alaska and Hawaii, and in the Southeast:
+
+```{r wind_gust_spread_map}
+#| fig-cap: Average forecast gust spread by aerodrome
+wind_gust_spread_avg <- lines %>% 
+      filter(variable=="wind_gust_spread") %>%
+      group_by(aerodrome) %>%
+      summarize(current=weighted.mean(current, count)) %>%
+      ungroup() %>%
+      left_join(stations, by=c("aerodrome")) %>%
+      filter(substr(aerodrome, 1, 1)=="K" | substr(aerodrome, 1, 2)=="PA" | substr(aerodrome, 1, 2)=="PH") 
+
+
+plot_usmap(fill="grey") +
+  geom_sf(data=usmap_transform(wind_gust_spread_avg, input_names = c("longitude", "latitude")),
+             aes(colour=current)) +
+  scale_colour_gradientn(colours = heat.colors(10)) +
+  labs(title = "Average Forecast Gust Spread by Aerodrome", colour="Knots")
+```
+
+The gustiest airports are:
+
+```{r wind_gust_spread_max_stations}
+#| tbl-cap: Aerodromes with the highest predicted average gust spread
+kable(head(
+  wind_gust_spread_avg %>% 
+  arrange(-current) %>% 
+  rename(average_wind = current) %>% 
+  select(aerodrome, name, average_wind)),
+  col.names = c("Aerodrome", "Name", "Average gust spread, knots"),
+  digits = 1)
+```
+
+{{< pagebreak >}} 
+
+### Autocorrelation
+
+##### Overall
+
+Reductions in predicted gust spreads do not tend to get revised, but
+increases mostly get revised at least partially.
+
+```{r wind_gust_spread_autocorr, warning=FALSE}
+#| fig-cap: Changes in predicted gust spread *vs.* final prediction
+wind_gust_spread_autocorr <- lines %>%
+  filter(variable=="wind_gust_spread") %>%
+  mutate(change_from_previous=current-previous, change_to_final=final-current) %>%
+  group_by(change_from_previous, change_to_final) %>%
+  summarise(count=sum(count), .groups="drop")
+
+
+print(
+  ggplot(wind_gust_spread_autocorr, aes(x=factor(change_from_previous, levels=-25:25), y=change_to_final, weight=count)) +
+    geom_boxplot() +
+    theme_bw() +
+    labs(
+      title="Changes in Predicted Gust Spread vs. Final Prediction",
+      x="Change in predicted gust spread, knots",
+         y="Change from prediction to final value, knots") +
+    geom_abline(slope=-1, intercept=26, linetype=4) +
+    scale_x_discrete(breaks=c(-25,-20,-15,-10,-5,0,5,10,15,20,25), drop=FALSE)
+)
+
+```
+
+We see a significantly larger effect size for the reversion of increases
+in predicted gust spreads than for decreases:
+
+```{r wind_gust_spread_autocorr_lm}
+wind_gust_spread_autocorr <- wind_gust_spread_autocorr %>%
+  mutate(change_increase=pmax(change_from_previous, 0),
+         change_decrease=pmin(change_from_previous, 0))
+
+wind_gust_spread_lm <- lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data=wind_gust_spread_autocorr)
+summary(wind_gust_spread_lm)
+```
+
+{{< pagebreak >}} 
+
+#### By year
+
+It appears that there is no significant change in autocorrelation
+patterns over the years:
+
+```{r wind_gust_spread_autocorr_year, warning=FALSE}
+#| fig-cap: Changes in predicted gust spread *vs.* final prediction by year
+#| fig-width: 10
+#| fig-height: 10
+wind_gust_spread_autocorr_year <- lines %>%
+  filter(variable=="wind_gust_spread") %>%
+  mutate(change_from_previous=current-previous, change_to_final=final-current) %>%
+  group_by(year, change_from_previous, change_to_final) %>%
+  summarise(count=sum(count), .groups="drop")
+
+
+print(
+  ggplot(wind_gust_spread_autocorr_year, aes(x=factor(change_from_previous, levels=-25:25), y=change_to_final, weight=count)) +
+    facet_wrap(~year) +
+    geom_boxplot(outliers = FALSE) +
+    theme_bw() +
+    labs(
+      title="Changes in Predicted Gust Spread vs. Final Prediction",
+      x="Change in predicted gust spread, knots",
+         y="Change from prediction to final value, knots") +
+    geom_abline(slope=-1, intercept=26, linetype=4) +
+    scale_x_discrete(breaks=c(-20,-10,0,10,20), drop=FALSE)
+)
+```
+
+{{< pagebreak >}} 
+
+##### By aerodrome
+
+There are some regional clusters for reversionary tendencies in
+predicted gust spread, but their meaning is not immediately
+obvious.
+
+```{r wind_gust_spread_autocorr_aerodrome_increase}
+#| fig-cap: Reversion of increases in predicted gust spread by aerodrome
+#| fig-width: 5
+#| fig-height: 3
+
+wind_gust_spread_autocorr_aerodrome <- lines %>%
+  filter(variable=="wind_gust_spread") %>%
+  mutate(change_from_previous=current-previous, change_to_final=final-current) %>%
+  group_by(aerodrome, change_from_previous, change_to_final) %>%
+  summarise(count=sum(count), .groups="drop") %>%
+  mutate(change_increase=pmax(change_from_previous, 0),
+         change_decrease=pmin(change_from_previous, 0)) %>%
+  nest_by(aerodrome) %>%
+  mutate(fitAerodrome = list(lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data = data))) %>%
+  reframe(tidy(fitAerodrome)) %>%
+  left_join(stations, by=c("aerodrome")) %>%
+  filter(substr(aerodrome, 1, 1)=="K" | substr(aerodrome, 1, 2)=="PA" | substr(aerodrome, 1, 2)=="PH") 
+
+plot_usmap(fill="grey") +
+  geom_sf(data=usmap_transform(wind_gust_spread_autocorr_aerodrome %>% filter(term=="change_increase"), input_names = c("longitude", "latitude")),
+             aes(colour=-estimate)) +
+  scale_colour_gradientn(colours = heat.colors(10)) +
+  labs(title = "Reversion of Increases in Predicted Gust Spread", colour="Reversion")
+
+```
+
+```{r wind_gust_spread_autocorr_aerodrome_decrease}
+#| fig-cap: Reversion of decreases in predicted gust spread by aerodrome
+#| fig-width: 5
+#| fig-height: 3
+
+
+plot_usmap(fill="grey") +
+  geom_sf(data=usmap_transform(wind_gust_spread_autocorr_aerodrome %>% filter(term=="change_decrease"), input_names = c("longitude", "latitude")),
+             aes(colour=-estimate)) +
+  scale_colour_gradientn(colours = heat.colors(10)) +
+  labs(title = "Reversion of Decreases in Predicted Gust Spread", colour="Reversion")
+
+
+```
+
+{{< pagebreak >}} 
+
+#### Reversion of predicted increases *vs.* decreases
+
+We see some correlation between reversionary tendencies for
+increases and decreases in predicted gust spreads.
+
+```{r wind_gust_spread_autocorr_aerodrome_increase_decrease}
+#| fig-cap: Reversion of predicted decrease *vs.* increase of gust spread by aerodrome
+
+ggplot(
+  wind_gust_spread_autocorr_aerodrome %>%
+    select(aerodrome, term, estimate) %>%
+    pivot_wider(names_from = term, values_from = estimate),
+  aes(x=-change_increase, y=-change_decrease, label=aerodrome)) +
+  geom_text(size=I(2)) +
+  theme_bw() +
+  labs(title="Reversion of Predicted Decrease vs. Increase of Gust Spread by Aerodrome",
+       x="Reversion of predicted increase",
+       y="Reversion of predicted decrease")
+
+```
+
 
 {{< pagebreak >}} 
 
