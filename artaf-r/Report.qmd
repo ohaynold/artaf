@@ -294,6 +294,9 @@ We then transform our variables by sigmoid curves as follows:
 wind_goodness<- function(wind_speed) { 
   (1 - 1 / (1 + exp(-0.25 * (wind_speed - 15)))) / (1 - 1 / (1 + exp(-0.25 * (0 - 15)))) 
   } 
+gust_goodness<- function(gust_spread) { 
+  (1 - 1 / (1 + exp(-0.3 * (gust_spread - 6)))) / (1 - 1 / (1 + exp(-0.3 * (0 - 6)))) 
+  } 
 cloud_goodness<- function(altitude) { 
   ((1 / (1 + exp(-0.1 * (sqrt(altitude) - 40)))) - (1 / (1 + exp(-0.1 * (0 - 40))))) /  ((1 / (1 + exp(-0.1 * (sqrt(18000) - 40)))) - (1 / (1 + exp(-0.1 * (0 - 40)))))
   } 
@@ -304,7 +307,21 @@ visibility_goodness<- function(miles) {
 
 
 Wind speed, with and without gusts:
-: Goodness of `r sprintf("%.2f", wind_goodness(0))` for calm wind, `r sprintf("%.2f", wind_goodness(10))` for 10 knots, `r sprintf("%.2f", wind_goodness(20))` for 20 knots, `r sprintf("%.2f", wind_goodness(30))` for 30 knots, 0 for infinite wind.
+: Goodness of 
+  `r sprintf("%.2f", wind_goodness(0))` for calm wind,
+  `r sprintf("%.2f", wind_goodness(10))` for 10 knots, 
+  `r sprintf("%.2f", wind_goodness(20))` for 20 knots, 
+  `r sprintf("%.2f", wind_goodness(30))` for 30 knots, 
+  0 for infinite wind.
+
+Gust spread:
+: Goodness of 
+  `r sprintf("%.2f", gust_goodness(0))` for no gusts,
+  `r sprintf("%.2f", gust_goodness(5))` for 5 knots gust spread, 
+  `r sprintf("%.2f", gust_goodness(10))` for 10 knots gust spread, 
+  `r sprintf("%.2f", gust_goodness(15))` for 15 knots gust spread, 
+  0 for infinite gust spread.
+
 
 Cloud layers, lowest and ceiling
 : We apply the sigmoid curve to the square root of the layer's base altitude, giving a goodness of
@@ -330,6 +347,11 @@ lines_goodness <- bind_rows(
     mutate(previous = wind_goodness(previous),
            current = wind_goodness(current),
            final = wind_goodness(final)),
+  lines %>%
+    filter(variable %in% c("wind_gust_spread")) %>%
+    mutate(previous = gust_goodness(previous),
+           current = gust_goodness(current),
+           final = gust_goodness(final)),
   lines %>%
     filter(variable %in% c("clouds_ceiling", "clouds_lowest_base")) %>%
     mutate(previous = cloud_goodness(previous),
