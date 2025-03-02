@@ -1125,7 +1125,7 @@ summary(wind_speed_directional_lm)
 
 {{< pagebreak >}} 
 
-## Gust Spread
+## Gust spread
 
 ### Summary statistics
 
