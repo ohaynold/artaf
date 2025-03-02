@@ -78,6 +78,8 @@ stations <- read_csv("../config/stations.csv",
               select(-center)
 ```
 
+{{< pagebreak >}}
+
 `r if(params$data_set!="full_set"){paste("**This report has been generated for the incomplete data set ", params$data_set, ".**", sep="")}`
 
 Pilots rely on Terminal Aerodrome Forecasts or TAFs published typically
@@ -166,8 +168,6 @@ sense of being loathe to make an update and in the sense of being
 cautious and pessimistic, from here on we will use the terms
 'underresponding' for what the literature usually calls 'conservative'
 and 'overresponding' for the opposite.
-
-{{< pagebreak >}}
 
 We can then write down a matrix of four possible stylized biases in
 responding to changes in available information for a forecast where
@@ -278,17 +278,119 @@ Visibility
 
 
 ```{r goodness_transform}
-lines_goodness_wind <- lines %>%
-  filter(variable %in% c("wind_speed", "wind_gust")) %>%
-  mutate(previous = wind_goodness(previous),
-         current = wind_goodness(current),
-         final = wind_goodness(final))
+lines_goodness <- bind_rows(
+  lines %>%
+    filter(variable %in% c("wind_speed", "wind_speed_with_gust")) %>%
+    mutate(previous = wind_goodness(previous),
+           current = wind_goodness(current),
+           final = wind_goodness(final)),
+  lines %>%
+    filter(variable %in% c("clouds_ceiling", "clouds_lowest_base")) %>%
+    mutate(previous = cloud_goodness(previous),
+           current = cloud_goodness(current),
+           final = cloud_goodness(final)),
+  lines %>%
+    filter(variable %in% c("visibility")) %>%
+    mutate(previous = visibility_goodness(previous),
+           current = visibility_goodness(current),
+           final = visibility_goodness(final))
+)
 ```
+
+## First differences
+
+We divide each TAF into hourly predictions for its prediction range. This will give us for each
+aerodrome and each hour a number of predictions. For all but the first and last of these predictions, we
+form triplets for each variables comprising the previously predicted value, the currently predicted value,
+and the value of the prediction in the final TAF issued for the hour in question.
+
+We then take first differences as the change from the previous TAF to the current TAF as well as for the
+change from the current TAF to the final TAF issued. The correlations between these first differences
+will inform us of the autocorrelations in changes of TAF predictions for the variables in questions,
+transformed into goodness values to make them comparable.
+
+Overall, this gives us `r format(sum(lines_goodness$count[lines_goodness$variable=="wind_speed"]), big.mark=",")`
+observations of changes in TAFs for a given hour for each variable. Since most predictions span more than an hour, these observations are not independent (and, of course, even when the prediction changes between two
+hours, the predictions for these hours come out of the same forecasting process). Over all variables,
+`r format(sum(lines_goodness$count[lines_goodness$current!=lines_goodness$previous]), big.mark=",")` records
+involve a change between the previous prediction and the current prediction.
+
+```{r first-differences-goodness, warnings=FALSE}
+changes_goodness <- lines_goodness %>%
+  mutate(change_from_previous = current - previous,
+         change_to_final = final - current) %>%
+  group_by(aerodrome, year, variable, change_from_previous, change_to_final) %>%
+  summarise(count=sum(count), .groups="drop")
+```
+
+{{< pagebreak >}}
 
 
 # Results
 
-TODO
+We can now examine the changes in the TAFs.
+
+```{r plot_changes_goodness, warning=FALSE}
+#| fig-cap: Changes in predicted goodness of weather conditions
+print(
+  ggplot(changes_goodness, aes(x=factor(round(change_from_previous*10,0)/10, levels=(-10:10)/10), y=change_to_final, weight=count)) +
+    geom_boxplot(outliers = FALSE) +
+    theme_bw() +
+    labs(
+      title="Changes in predicted goodness vs. final",
+      x="Change from previous",
+         y="Change to final") +
+    geom_abline(slope=-0.1, intercept=1.1, linetype=4) +
+    scale_x_discrete(breaks=c(-1,-0.5,0,0.5,1), drop=FALSE) +
+    facet_wrap(~variable)
+)
+
+
+```
+
+We can see that there is clearly a reversionary tendency in changes in TAFs, *i.e.*, if forecasters
+make a change to a TAF, they tend to overrespond to new information. As a first approximation, the
+second and third quantiles of the changes seem to fall between the change remaining as is in the final TAF
+and the change getting fully backed out in the final TAF.
+
+The autocorrelations appear asymmetric, however. With the exception of the lowest cloud base, the tendency of
+overreaction appears much stronger for worsening predictions than for improving ones. We can quantify this
+by a regression of the change to final against the change from the previous prediction:
+
+{{< pagebreak >}}
+
+```{r reversion_goodness_coefficients}
+#| tbl-cap: Coefficients of reversion of changes in predicted goodness by variable
+
+correl_changes_goodness <- changes_goodness %>%
+  group_by(variable, change_from_previous, change_to_final) %>%
+  summarise(count=sum(count), .groups="drop") %>%
+  mutate(change_increase=pmax(change_from_previous, 0),
+         change_decrease=pmin(change_from_previous, 0)) %>%
+  nest_by(variable) %>%
+  mutate(fitVariable = list(lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data = data))) %>%
+  reframe(tidy(fitVariable))
+
+correl_changes_goodness_display <- correl_changes_goodness %>%
+  mutate(reversion=-estimate) %>%
+  select(variable,term,reversion) %>%
+  pivot_wider(names_from = term, values_from = reversion)
+
+colnames(correl_changes_goodness_display) <- c("Variable", "Reversion of increases", "Reversion of decreases")
+
+kable(correl_changes_goodness_display, digits = 2)
+```
+
+We can thus say that the changes in predictions exhibit a mixture of a pessimistc and an overreacting
+bias. Forecasters overreact when they adjust forecasts, but while they overreact strongly for
+worsening predictions, they overreact more mildly for improving predictions. For visibility this is
+so much so that we can expect improvements in prediction to last essentially unchanged into the final
+TAF. The base of the lowest cloud layer may be an exception to this rule where forecasters are less
+pessimistic than for other variables since this variable has less importance for aviation by instrument
+flight rules (or for bold aviation by visual flight rules).
+
+
+{{< pagebreak >}}
 
 # Detailed Data Analysis {#sec-detailed_data_analysis .appendix}
 
