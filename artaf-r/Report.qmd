@@ -23,7 +23,7 @@ number-sections: true
 number-depth: 3
 font-size: 10
 params:
-  data_set: "tiny_data"
+  data_set: "full_set"
 tbl-cap-location: bottom
 bibliography: bibliography.bibtex
 copyright:
@@ -37,6 +37,11 @@ editor:
   markdown: 
     wrap: 72
 ---
+
+Copyright © {{<meta copyright.year>}} by  {{<meta copyright.holder>}}. 
+
+{{<meta license.text>}} The full license is available at [{{<meta license.url>}}]({{<meta license.url>}}).
+
 
 ```{r setup, include=FALSE}
 library(spatstat)
@@ -246,7 +251,7 @@ We then transform our variables by sigmoid curves as follows:
 
 ```{r goodness_functions}
 wind_goodness<- function(wind_speed) { 
-  (1 - 1 / (1 + exp(-0.14 * (wind_speed - 18)))) / (1 - 1 / (1 + exp(-0.14 * (0 - 18)))) 
+  (1 - 1 / (1 + exp(-0.25 * (wind_speed - 15)))) / (1 - 1 / (1 + exp(-0.25 * (0 - 15)))) 
   } 
 cloud_goodness<- function(altitude) { 
   ((1 / (1 + exp(-0.1 * (sqrt(altitude) - 40)))) - (1 / (1 + exp(-0.1 * (0 - 40))))) /  ((1 / (1 + exp(-0.1 * (sqrt(18000) - 40)))) - (1 / (1 + exp(-0.1 * (0 - 40)))))
@@ -315,14 +320,6 @@ hours, the predictions for these hours come out of the same forecasting process)
 `r format(sum(lines_goodness$count[lines_goodness$current!=lines_goodness$previous]), big.mark=",")` records
 involve a change between the previous prediction and the current prediction.
 
-```{r first-differences-goodness, warnings=FALSE}
-changes_goodness <- lines_goodness %>%
-  mutate(change_from_previous = current - previous,
-         change_to_final = final - current) %>%
-  group_by(aerodrome, year, variable, change_from_previous, change_to_final) %>%
-  summarise(count=sum(count), .groups="drop")
-```
-
 {{< pagebreak >}}
 
 
@@ -332,8 +329,17 @@ We can now examine the changes in the TAFs.
 
 ```{r plot_changes_goodness, warning=FALSE}
 #| fig-cap: Changes in predicted goodness of weather conditions
+
+# geom_boxplot gets unhappy about large datasets, so we presummarize
+changes_goodness_hist <- lines_goodness %>%
+  mutate(change_from_previous = round(current - previous,1),
+         change_to_final = final - current) %>%
+  group_by(variable, change_from_previous, change_to_final) %>%
+  summarise(count = sum(count), .groups = "drop")
+  
+
 print(
-  ggplot(changes_goodness, aes(x=factor(round(change_from_previous*10,0)/10, levels=(-10:10)/10), y=change_to_final, weight=count)) +
+  ggplot(changes_goodness_hist, aes(x=factor(round(change_from_previous*10,0)/10, levels=(-10:10)/10), y=change_to_final, weight=count)) +
     geom_boxplot(outliers = FALSE) +
     theme_bw() +
     labs(
@@ -362,11 +368,13 @@ by a regression of the change to final against the change from the previous pred
 ```{r reversion_goodness_coefficients}
 #| tbl-cap: Coefficients of reversion of changes in predicted goodness by variable
 
-correl_changes_goodness <- changes_goodness %>%
-  group_by(variable, change_from_previous, change_to_final) %>%
-  summarise(count=sum(count), .groups="drop") %>%
+correl_changes_goodness <- lines_goodness %>%
+  mutate(change_from_previous = current - previous,
+         change_to_final = final - current) %>%
   mutate(change_increase=pmax(change_from_previous, 0),
          change_decrease=pmin(change_from_previous, 0)) %>%
+  group_by(variable, change_increase, change_decrease, change_to_final) %>%
+  summarise(count=sum(count), .groups = "drop") %>%
   nest_by(variable) %>%
   mutate(fitVariable = list(lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data = data))) %>%
   reframe(tidy(fitVariable))
@@ -389,6 +397,86 @@ TAF. The base of the lowest cloud layer may be an exception to this rule where f
 pessimistic than for other variables since this variable has less importance for aviation by instrument
 flight rules (or for bold aviation by visual flight rules).
 
+If forecast biases are unintentional, one often sees them reduce over time. If they are intentional and
+serve a purpose, however, they may persist over time, even as users become conscious of them and computer
+models improve. We can thus look at the development of reversionary tendencies in changes to TAFs over time:
+
+```{r reversion_goodness_time}
+
+correl_changes_goodness_year <- lines_goodness %>%
+  mutate(change_from_previous = current - previous,
+         change_to_final = final - current) %>%
+  group_by(year, variable, change_from_previous, change_to_final) %>%
+  summarise(count=sum(count), .groups="drop") %>%
+  mutate(change_increase=pmax(change_from_previous, 0),
+         change_decrease=pmin(change_from_previous, 0)) %>%
+  nest_by(year, variable) %>%
+  mutate(fitVariable = list(lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data = data))) %>%
+  reframe(tidy(fitVariable))
+
+print(
+  ggplot(correl_changes_goodness_year, aes(x=year,y=-estimate, colour=variable)) +
+    geom_line() +
+    facet_wrap(~term) +
+    theme_bw() +
+    scale_y_continuous(limits=c(0,1)) +
+    labs("Change in TAF Reversion over Time", x="", y="Reversion coefficient")
+)
+
+```
+It appears that the reversionary tendencies of forecasts remain largely unchanged. This suggests
+that they may be an intentional behavior by forecasters, not an artifact of computer models or
+unintentional bias.
+
+We may finally ask whether reversionary tendencies might be more pronounced at certain places than
+others. For worsening predictions, we see some tendencies that might be explained by different
+weather patterns, but also some where that is at first glance hard to believe. In particular, there is
+a curious effect that worsening predictions in Wyoming seem to be significantly less likely to get
+reversed than in Montana or Colorado.
+
+```{r reversion_goodness_decrease_place}
+#| fig-cap: Reversion of Decreases in Goodness by Aerodrome
+correl_changes_goodness_aerodrome <- lines_goodness %>%
+  mutate(change_from_previous = current - previous,
+         change_to_final = final - current) %>%
+  group_by(aerodrome, change_from_previous, change_to_final) %>%
+  summarise(count=sum(count), .groups="drop") %>%
+  mutate(change_increase=pmax(change_from_previous, 0),
+         change_decrease=pmin(change_from_previous, 0)) %>%
+  nest_by(aerodrome) %>%
+  mutate(fitVariable = list(lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data = data))) %>%
+  reframe(tidy(fitVariable))  %>%
+  left_join(stations, by=c("aerodrome")) %>%
+  filter(substr(aerodrome, 1, 1)=="K" | substr(aerodrome, 1, 2)=="PA" | substr(aerodrome, 1, 2)=="PH") 
+
+plot_usmap(fill="grey") +
+  geom_sf(data=usmap_transform(correl_changes_goodness_aerodrome %>% filter(term=="change_decrease"), input_names = c("longitude", "latitude")),
+             aes(colour=-estimate)) +
+  scale_colour_gradientn(colours = heat.colors(10)) +
+  labs(title = "Reversion of Decreases in Predicted Goodness", colour="Reversion")
+```
+For reversions of improvements in predictions, a cluster of optimism around Boston stands out where
+improvements in predictions are much more likely to get reversed than in New York City:
+
+```{r reversion_goodness_increase_place}
+#| fig-cap: Reversion of Increases in Goodness by Aerodrome
+plot_usmap(fill="grey") +
+  geom_sf(data=usmap_transform(correl_changes_goodness_aerodrome %>% filter(term=="change_increase"), input_names = c("longitude", "latitude")),
+             aes(colour=-estimate)) +
+  scale_colour_gradientn(colours = heat.colors(10)) +
+  labs(title = "Reversion of Increases in Predicted Goodness", colour="Reversion")
+```
+# Conclusion
+
+It appears that there is indeed autocorrelation in changes to TAFs. Hence, a pilot can glean additional information by not looking only at the most current TAF for the time and place he wants to fly, but also
+at previously issues TAFs for the same time and place. If the prediction worsened, there is grounds for hope
+that this worsening will be reversed in the final TAF before he goes flying. If the prediction improved,
+there is grounds for hope that the improvement will hold.
+
+While TAFs have some power of their own, in particular with respect to flights under instruments rules being
+allowed to take off, what matters most, of course, is not what the final TAF issued for a place and time looks
+like, but how the weather actually turned out. From the interesting patterns we have seen in the evolution
+of the forecasts, the relationship between that evolution and enventual weather realizations might be a fertile field for another study.
 
 {{< pagebreak >}}
 
