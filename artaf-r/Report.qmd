@@ -7,6 +7,8 @@ format:
   pdf:
     fig-width: 7
     fig-height: 4.5
+header-includes:
+   - \usepackage{booktabs}
 crossref:
   fig-title: Figure
   fig-prefix: Figure
@@ -21,7 +23,7 @@ number-sections: true
 number-depth: 3
 font-size: 10
 params:
-  data_set: "full_set"
+  data_set: "tiny_data"
 tbl-cap-location: bottom
 bibliography: bibliography.bibtex
 copyright:
@@ -31,6 +33,9 @@ license:
     text: This work is licensed under CC BY 4.0.
     type: open-access
     url: https://creativecommons.org/licenses/by/4.0/
+editor: 
+  markdown: 
+    wrap: 72
 ---
 
 ```{r setup, include=FALSE}
@@ -75,41 +80,217 @@ stations <- read_csv("../config/stations.csv",
 
 `r if(params$data_set!="full_set"){paste("**This report has been generated for the incomplete data set ", params$data_set, ".**", sep="")}`
 
+Pilots rely on Terminal Aerodrome Forecasts or TAFs published typically
+every six hours for about 700 airports in the United States.[@ac0045H;
+@fcmh12019] Although these forecasts rely on computer models, they still
+involve significant human judgment and are prepared by meteorologists.
+In the verbal discussions accompanying the formal forecasts, the
+meteorologists sometimes make mention of "not yet" including or changing
+something they foresee since they're not certain enough yet to find
+doing so worthwhile.
 
-Pilots rely on Terminal Aerodrome Forecasts or TAFs
-published typically every six hours for about 700 airports in the United States.[@ac0045H; @fcmh12019] Although these forecasts rely on
-computer models, they still involve significant human judgment and are prepared by meteorologists. In the verbal
-discussions accompanying the formal forecasts, the meteorologists sometimes make mention of "not yet" including or
-changing something they foresee since they're not certain enough yet to find doing so worthwhile.
-
-We want to see if we can find evidence of the meteorologists being too conservative or too
-aggressive in incorporating new information as it becomes available. That is to say, we'd like to see whether there is
+We want to see if we can find evidence of the meteorologists being too
+conservative or too aggressive in incorporating new information as it
+becomes available. That is to say, we'd like to see whether there is
 autoregressive behavior in changes of the forecast for the same
-parameter at the same time and place. Put simply, if the meteorologist makes his forecast worse than it was, is that
-reason to believe he'll make it even worse in the next update? (*E.g.*, if in the evening before I want to go flying,
-the forecast for 9 AM the next morning goes from a cloud base of 5000 ft to 4000 ft, is that reason to assume that by
-the morning, the forecast will be 3000 ft, in which case I'll probably stay home?)
-
+parameter at the same time and place. Put simply, if the meteorologist
+makes his forecast worse than it was, is that reason to believe he'll
+make it even worse in the next update? (*E.g.*, if in the evening before
+I want to go flying, the forecast for 9 AM the next morning goes from a
+cloud base of 5,000 ft to 4,000 ft, is that reason to assume that by the
+morning, the forecast will be 3,000 ft, in which case I'll probably stay
+home?)
 
 # Research Problem
 
-TODO
+Research in psychology, financial markets, behavioral economics, and
+related field has created an abundance of evidence that humans do not
+tend to update their forecasts of future events with optimal efficiency
+in the sense of a Bayesian update. The direction of such biases found
+appears inconsistent, however. The literature provides ample evidence
+for humans being too conservative in their updates, *i.e.,* not taking
+new information fully into account, and well as for being too aggressive
+in their updates. [@ward1968; @griffin1992; @barberis1998;
+@kahneman1973; @debondt1985; @daniel1998] We can define an efficent
+forecast as one that takes into account all information available at the
+time the forecast is made. [@nordhaus1987; @coibion2012] If a forecast
+is efficient in this sense, there is no additional information to be
+gleaned from looking a previous forecasts made for the same event by the
+same forecaster.
 
-@ward1968, @griffin1992, and @barberis1998 say forecasters underreact to new information, etc. pp. TODO
+While forecast biases have often been discussed in a context of alleged
+irrationality by the forecasters, we should note that there are
+perfectly plausible rational reasons for making biased forecasts. In the
+case of weather forecasts for dissemination to the general public, there
+is a well-documented bias toward predicting rain. [@bickel2008] This
+bias can be quite drastic, such as with predictions of a 20% chance of
+rain only materializing in about 5% of cases. [@silver2012] One can
+easily hypothesize a plausible reason for such bias in what in
+quantiative finance would be called the pricing kernel, *i.e.,* an
+adjustment to weights in the probability space according to the
+unpleasantry of the event. Consumers of the weather report may be
+unhappier about getting wet because it rains and they did not take an
+umbrella than they are about taking an umbrella needlessly.
+Consequently, they may get unhappier at the weather forecaster for a
+false forecast of dry weather than they get at a false forecast of rain.
+If this is so, the forecaster may well advance consumer happiness and
+thus his career by exhibiting a bias for forecasting rain.
 
-@kahneman1973, @debondt1985, and @daniel1998 suggest they overreact. TODO
+Studies about biases in weather forecasts have typically looked at bias
+in the forecasts rather than bias in the updates to forecasts, but one
+can easily hypothesize similar incentives for bias in updating
+forecasts. For example, if consumers of a forecast are unhappy about the
+forecast changing often, it may be a wise career move for the forecaster
+only to update his forecast once he is reasonably sure that he will not
+have to revise it back.
 
-@nordhaus1987, @coibion2012, and @timmerman2006 discuss serial autocorrelations in forecast innovations. TODO.
+If forecasters are too aggressive or too conservative in updating
+forecasts, we should expect to see serial autocorrelations in the
+changes to their forecasts for the same event made over time. For
+example, if a forecast gets updated from 10 knots of wind to 15 knots,
+then if the forecaster is conservative, we might expect to see the next
+forecast for the same place and time to go to 17 knots. Conversely, if
+the forecaster is too aggressive in his updates, we might expect the
+next forecast, as the forecast period draws nearer and more information
+gets revealed, to update his forecast back to 13 knots.
+
+It would also seem plausible for the forecaster to exhibit different
+degrees of conservatism and aggression in updating forecasts with good
+news and bad news. We may call a bias that is overresponds to bad news
+and underresponds to good news pessimistic; conversely, we may call a
+bias that underresponds to bad news and overresponds to good news
+optimistic. Of course, this classification only makes sense if updates
+to the forecast can reasonably be classified as being good news or bad
+news. Since there is a danger of confusion between 'conservatism' in the
+sense of being loathe to make an update and in the sense of being
+cautious and pessimistic, from here on we will use the terms
+'underresponding' for what the literature usually calls 'conservative'
+and 'overresponding' for the opposite.
+
+{{< pagebreak >}}
+
+We can then write down a matrix of four possible stylized biases in
+responding to changes in available information for a forecast where
+those changes can be classified as good or bad:
+
+|   | Overresponding to good news | Underresponding to good news |
+|------------------------|------------------------|-------------------------|
+| Overresponding to bad news | Overresponding | Pessimistic |
+| Underresponding to bad news | Optimistic | Underresponding |
+
+: Stylized biases of forecasts updates {#tbl-stylized-biases}
+
+Our research question then becomes: Can we find evidence of bias in changes to Terminal Aerodrome Forecasts
+that manifest in autocorrelation of these changes for the same time and place? If so, which of our
+stylized biases does this bias belong to? Does the answer change for different variables? Does the answer change over time?
+
+If should be noted that our question as posed does not directly answer anything about whether
+the forecasts of the TAFs come true. That would require looking at actual weather
+realizations, such as reported in METARs. We can thus not distinguish how autocorrelative bias
+in TAFs, if any, relates to the eventual realizations. Forecasters could, for example,
+be loath to include weather changes they have not previously forecast in a TAF, even if
+they are already reported in the METAR (and some pilots would claim anecdotal evidence
+for this to be true). We merely can show whether knowledge of the history of the TAF predictions
+for a given time and place adds any information to what the final TAF prediction will likely
+look like, whether or not that actually corresponds to the weather realization.
 
 # Analysis
 
-TODO
+The software used to download, parse, process, and analyze the TAFs and generate this article
+is available at [DOI 10.5281/zenodo.14954562](https://doi.org/10.5281/zenodo.14954562).
+
+## Data acquisition
+We ran our analysis for the `r sprintf("%d", dim(stations)[1])` aerodromes for which the National Weather Service
+published TAFs at the end of 2024. We built a downloader to obtain these TAFs from the archive at [Iowa State University's Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/) and made a data set from 1997 through 2024 available at [DOI 10.5281/zenodo.14954564](https://doi.org/10.5281/zenodo.14954564).The United States changed its TAF format as well as the forecast range on 5 November 2008. [@sc0846] In order to avoid a break in our data set from this change, we limit our analysis to the years from 2010 through 2024.
+
+TODO Parsing results
+
+## Variables considered
+
+For our analyses, we parsed the TAFs we obtained and looked at the most pertient (semi-)continous variables for flight/no flight decisions:
+
+Wind speed without gusts
+: in knots
+
+Wind speed with gusts
+: in knots, the gust speed if given, otherwise the wind speed
+
+Wind speed directional
+: in knots, the northerly and easterly components of the wind speed
+
+Lowest cloud layer
+: in feet, the lowest cloud layer of any extent, taking clear skies at 18,000 feet
+
+Ceiling
+: in feet, the lowest cloud layer that is at least broken, taking clear skies at 18,000 feet
+
+Visibility
+: in statute miles, with a maximum value of 6 miles for unobstructed visibility
+
+Other variables may certainly be of importance, including binary ones like the forecast presence of thunderstorms, but we hope that these continuous variables will gives us a good data set from which
+to analyze biases in forecast changes.
+
+We show a detailed analysis of those data, both cross-sectional and autocorrelations of changes, in their original units in section @sec-detailed_data_analysis. 
+
+## Quality transformation
+
+In order to evaluate for optimistic and pessimistic biases, we need to say what is a good or a bad
+value for the variables in question. What different flight operations consider acceptable depends, of course,
+on factors such as the aircraft involved, whether the flight is conducted under visual or instrument flight rules, terrain, the alignment of available runways against the wind, *etc.* Goodness of a variable also
+need not be a monotonic function of its value. For example, some headwind is advantageous for a takeoff or
+landing. However, crosswinds and tailwinds are not. For simplicity, we treat the goodness of wind as monotonic
+and say that less wind is better. For cloud layers and visibility, larger distances are, of course, better, so
+for these variables it's easy.
+
+We then transform our variables by sigmoid curves as follows:
+
+```{r goodness_functions}
+wind_goodness<- function(wind_speed) { 
+  (1 - 1 / (1 + exp(-0.14 * (wind_speed - 18)))) / (1 - 1 / (1 + exp(-0.14 * (0 - 18)))) 
+  } 
+cloud_goodness<- function(altitude) { 
+  ((1 / (1 + exp(-0.1 * (sqrt(altitude) - 40)))) - (1 / (1 + exp(-0.1 * (0 - 40))))) /  ((1 / (1 + exp(-0.1 * (sqrt(18000) - 40)))) - (1 / (1 + exp(-0.1 * (0 - 40)))))
+  } 
+visibility_goodness<- function(miles) { 
+   ((1 / (1 + exp(-1 * (sqrt(miles) - 1.7)))) - (1 / (1 + exp(-1 * (0 - 1.7))))) /  ((1 / (1 + exp(-1 * (sqrt(6) - 1.7)))) - (1 / (1 + exp(-1 * (0 - 1.7)))))
+  } 
+```
+
+
+Wind speed, with and without gusts:
+: Goodness of `r sprintf("%.2f", wind_goodness(0))` for calm wind, `r sprintf("%.2f", wind_goodness(10))` for 10 knots, `r sprintf("%.2f", wind_goodness(20))` for 20 knots, `r sprintf("%.2f", wind_goodness(30))` for 30 knots, 0 for infinite wind.
+
+Cloud layers, lowest and ceiling
+: We apply the sigmoid curve to the square root of the layer's base altitude, giving a goodness of
+  `r sprintf("%.2f", cloud_goodness(0))` for clouds to the ground,
+  `r sprintf("%.2f", cloud_goodness(500))` for clouds at 500 feet, 
+  `r sprintf("%.2f", cloud_goodness(1000))` for clouds at 1000 feet,
+  `r sprintf("%.2f", cloud_goodness(3000))` for clouds at 3000 feet, and
+  `r sprintf("%.2f", cloud_goodness(18000))` for clear skies.
+
+Visibility
+: We apply the sigmoid curve to the square root of visibility, giving a goodness of
+  `r sprintf("%.2f", cloud_goodness(0))` for no visibility,
+  `r sprintf("%.2f", visibility_goodness(0.5))` for 0.5 statute miles, 
+  `r sprintf("%.2f", visibility_goodness(1))` for 1 statute mile, 
+  `r sprintf("%.2f", visibility_goodness(3))` for 3 statute miles, and
+  `r sprintf("%.2f", visibility_goodness(6))` for unlimited visibility. 
+
+
+```{r goodness_transform}
+lines_goodness_wind <- lines %>%
+  filter(variable %in% c("wind_speed", "wind_gust")) %>%
+  mutate(previous = wind_goodness(previous),
+         current = wind_goodness(current),
+         final = wind_goodness(final))
+```
+
 
 # Results
 
 TODO
 
-# Detailed Data Analysis {.appendix}
+# Detailed Data Analysis {#sec-detailed_data_analysis .appendix}
 
 ## Wind Speed without Gusts
 
@@ -141,11 +322,13 @@ knots.
 ```
 
 {{< pagebreak >}}
+
 ##### Extreme values
 
-For wind speeds exceeding 10 knots, we see an exponential decay in their frequency 
-of being forecast, albeit with a distinct clustering around round numbers. However,
-that relationship breaks down for the very small number of predictions exceeding 50 knots.
+For wind speeds exceeding 10 knots, we see an exponential decay in their
+frequency of being forecast, albeit with a distinct clustering around
+round numbers. However, that relationship breaks down for the very small
+number of predictions exceeding 50 knots.
 
 ```{r wind_speed_hist_log, warning=FALSE}
 #| fig-cap: Histogram of Wind Speeds, log scale
@@ -160,9 +343,11 @@ that relationship breaks down for the very small number of predictions exceeding
 ```
 
 {{< pagebreak >}}
+
 ##### By location
 
-By station location, we see the well-known wind corridor from the Dakotas to West Texas.
+By station location, we see the well-known wind corridor from the
+Dakotas to West Texas.
 
 ```{r wind_speed_map}
 #| fig-cap: Average Wind Forecast Speed by Location
@@ -195,13 +380,14 @@ kable(head(
   digits = 1)
 ```
 
-{{< pagebreak >}}
+{{< pagebreak >}} 
+
 ### Autocorrelation
 
 ##### Overall
 
-Reductions in predicted wind speeds do not tend to get revised, but increases
-mostly get revised:
+Reductions in predicted wind speeds do not tend to get revised, but
+increases mostly get revised:
 
 ```{r wind_speed_autocorr, warning=FALSE}
 #| fig-cap: Changes in predicted wind speed vs. realization
@@ -227,7 +413,8 @@ print(
 
 ```
 
-We see a significantly larger effect size for the reversion of increases in predicted wind speeds than for decreases:
+We see a significantly larger effect size for the reversion of increases
+in predicted wind speeds than for decreases:
 
 ```{r wind_speed_autocorr_lm}
 wind_speed_autocorr <- wind_speed_autocorr %>%
@@ -237,10 +424,13 @@ wind_speed_autocorr <- wind_speed_autocorr %>%
 wind_speed_lm <- lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data=wind_speed_autocorr)
 summary(wind_speed_lm)
 ```
-{{< pagebreak >}}
+
+{{< pagebreak >}} 
+
 #### By year
 
-It appears that there is no significant change in autocorrelation patterns over the years:
+It appears that there is no significant change in autocorrelation
+patterns over the years:
 
 ```{r wind_speed_autocorr_year, warning=FALSE}
 #| fig-cap: Changes in predicted wind speed vs. realization by year
@@ -268,10 +458,13 @@ print(
 )
 ```
 
-{{< pagebreak >}}
+{{< pagebreak >}} 
+
 ##### By location
 
-We break down the tendency of changes in predicted wind speed to revert by aerodrome. We see some geographic clusters, though their meaning is not immediately obvious.
+We break down the tendency of changes in predicted wind speed to revert
+by aerodrome. We see some geographic clusters, though their meaning is
+not immediately obvious.
 
 ```{r wind_speed_autocorr_aerodrome_increase}
 #| fig-cap: Reversion of Increases in Predicted Wind Speed by Aerodrome
@@ -314,10 +507,13 @@ plot_usmap(fill="grey") +
 
 
 ```
-{{< pagebreak >}}
+
+{{< pagebreak >}} 
+
 #### Reversion of predicted increases vs. decreases
 
-We do not see much correlation between reversionary tendencies for increases and decreases in predicted wind speed.
+We do not see much correlation between reversionary tendencies for
+increases and decreases in predicted wind speed.
 
 ```{r wind_speed_autocorr_aerodrome_increase_decrease}
 #| fig-cap: Reversion of predicted decrease vs. increase of wind speed by aerodrome
@@ -335,8 +531,8 @@ ggplot(
 
 ```
 
+{{< pagebreak >}} 
 
-{{< pagebreak >}}
 ## Wind Speed with Gusts
 
 ### Summary Statistics
@@ -355,9 +551,9 @@ Wind speeds with gust are forecast at an average of
 `r sprintf("%.1f", weighted.mean(wind_speed_gust_hist$current, wind_speed_gust_hist$count))`
 knots.
 
-We see an interesting distribution of wind speeds with gust with the typical exponential
-decay interrupted between 13 and 25 knots, the proceeding as expected from 25 knots to
-70 knots, and ceasing there:
+We see an interesting distribution of wind speeds with gust with the
+typical exponential decay interrupted between 13 and 25 knots, the
+proceeding as expected from 25 knots to 70 knots, and ceasing there:
 
 ```{r wind_speed_gust_hist}
 #| fig-cap: Histogram of Wind Speeds with Gust
@@ -370,9 +566,9 @@ decay interrupted between 13 and 25 knots, the proceeding as expected from 25 kn
    )
 ```
 
-{{< pagebreak >}}
-#### Extreme values
+{{< pagebreak >}} 
 
+#### Extreme values
 
 ```{r wind_speed_gust_hist_log, warning=FALSE}
 #| fig-cap: Histogram of Wind Speeds, log scale
@@ -385,7 +581,8 @@ decay interrupted between 13 and 25 knots, the proceeding as expected from 25 kn
    )
 ```
 
-{{< pagebreak >}}
+{{< pagebreak >}} 
+
 ##### By location
 
 The geographical distribution is as expected.
@@ -408,7 +605,6 @@ plot_usmap(fill="grey") +
   labs(title = "Average Wind Forecast Speed with Gust by Location", colour="Knots")
 ```
 
-
 The windiest airports for winds including gusts, by prediction, are:
 
 ```{r wind_speed_gust_max_stations}
@@ -422,13 +618,14 @@ kable(head(
   digits = 1)
 ```
 
-{{< pagebreak >}}
+{{< pagebreak >}} 
+
 ### Autocorrelation
 
 ##### Overall
 
-Reductions in predicted wind speeds do not tend to get revised, but increases
-mostly get revised:
+Reductions in predicted wind speeds do not tend to get revised, but
+increases mostly get revised:
 
 ```{r wind_speed_gust_autocorr, warning=FALSE}
 #| fig-cap: Changes in predicted wind speed vs. realization
@@ -454,7 +651,8 @@ print(
 
 ```
 
-We see a significantly larger effect size for the reversion of increases in predicted wind speeds than for decreases:
+We see a significantly larger effect size for the reversion of increases
+in predicted wind speeds than for decreases:
 
 ```{r wind_speed_gust_autocorr_lm}
 wind_speed_gust_autocorr <- wind_speed_gust_autocorr %>%
@@ -464,10 +662,13 @@ wind_speed_gust_autocorr <- wind_speed_gust_autocorr %>%
 wind_speed_gust_lm <- lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data=wind_speed_gust_autocorr)
 summary(wind_speed_gust_lm)
 ```
-{{< pagebreak >}}
+
+{{< pagebreak >}} 
+
 #### By year
 
-It appears that there is no significant change in autocorrelation patterns over the years:
+It appears that there is no significant change in autocorrelation
+patterns over the years:
 
 ```{r wind_speed_gust_autocorr_year, warning=FALSE}
 #| fig-cap: Changes in predicted wind speed with gust vs. realization by year
@@ -495,10 +696,13 @@ print(
 )
 ```
 
-{{< pagebreak >}}
+{{< pagebreak >}} 
+
 ##### By location
 
-There are some regional clusters for reversionary tendencies in predicted wind speed with gust, but their meaning is not immediately obvious.
+There are some regional clusters for reversionary tendencies in
+predicted wind speed with gust, but their meaning is not immediately
+obvious.
 
 ```{r wind_speed_gust_autocorr_aerodrome_increase}
 #| fig-cap: Reversion of Increases in Predicted Wind Speed with Gust by Aerodrome
@@ -542,11 +746,12 @@ plot_usmap(fill="grey") +
 
 ```
 
-{{< pagebreak >}}
+{{< pagebreak >}} 
+
 #### Reversion of predicted increases vs. decreases
 
-
-We do not see much correlation between reversionary tendencies for increases and decreases in predicted wind speed with gust.
+We do not see much correlation between reversionary tendencies for
+increases and decreases in predicted wind speed with gust.
 
 ```{r wind_speed_gust_autocorr_aerodrome_increase_decrease}
 #| fig-cap: Reversion of predicted decrease vs. increase of wind speed with gust by aerodrome
@@ -564,9 +769,8 @@ ggplot(
 
 ```
 
+{{< pagebreak >}} 
 
-
-{{< pagebreak >}}
 ## Wind Speed Directional
 
 ### Summary Statistics
@@ -606,12 +810,17 @@ knots. Patterns are as for wind speed:
    )
 ```
 
-{{< pagebreak >}}
+{{< pagebreak >}} 
+
 ### Autocorrelation
 
 ##### Overall
 
-Once we take wind direction into account and look at northerly and easterly components of wind speed, the pattern we have seen above of a distinction between increases and decreases in wind speed largely disappears and becomes more symmetrical. This is to be expected as directional wind speed has a sign.
+Once we take wind direction into account and look at northerly and
+easterly components of wind speed, the pattern we have seen above of a
+distinction between increases and decreases in wind speed largely
+disappears and becomes more symmetrical. This is to be expected as
+directional wind speed has a sign.
 
 ```{r wind_speed_directional_autocorr, warning=FALSE}
 #| fig-cap: Changes in predicted wind speed component vs. realization
@@ -638,7 +847,9 @@ print(
 
 ```
 
-Thus, our reversionary tendency also becomes weaker as we cannot meaningfully distinguish increases and decreases when we take direction into account:
+Thus, our reversionary tendency also becomes weaker as we cannot
+meaningfully distinguish increases and decreases when we take direction
+into account:
 
 ```{r wind_speed_directional_autocorr_lm}
 
@@ -646,7 +857,8 @@ wind_speed_directional_lm <- lm(change_to_final ~ change_from_previous + 0, weig
 summary(wind_speed_directional_lm)
 ```
 
-{{< pagebreak >}}
+{{< pagebreak >}} 
+
 ## Lowest Cloud Layer
 
 ### Summary Statistics
@@ -660,7 +872,10 @@ summary(wind_speed_directional_lm)
       ungroup()
 ```
 
-For the base of the lowest cloud layer, we see a mode for no clouds below 18,000 feet, which we show as 18,000 even for clear skies. Below that, we see a decline of prediction frequency with increasing altitude, with peaks at the round numbers of 10,000 feet and 15,000 feet.
+For the base of the lowest cloud layer, we see a mode for no clouds
+below 18,000 feet, which we show as 18,000 even for clear skies. Below
+that, we see a decline of prediction frequency with increasing altitude,
+with peaks at the round numbers of 10,000 feet and 15,000 feet.
 
 ```{r clouds_lowest_hist}
 #| fig-cap: Histogram of Lowest Cloud Layer Base
@@ -672,7 +887,10 @@ For the base of the lowest cloud layer, we see a mode for no clouds below 18,000
    )
 ```
 
-In the geographic distribution, we are seeing a distinct cluster of few low clouds in the sunny Southwest. We are showing the median instead of the average since the top value of 18,000 that is also taken for clear skies is an arbitrary choice.
+In the geographic distribution, we are seeing a distinct cluster of few
+low clouds in the sunny Southwest. We are showing the median instead of
+the average since the top value of 18,000 that is also taken for clear
+skies is an arbitrary choice.
 
 ```{r clouds_lowest_map}
 #| fig-cap: Median Cloud Altitude by Location
@@ -692,14 +910,20 @@ plot_usmap(fill="grey") +
   labs(title = "Median Lowest Cloud Layer Base by Location", colour="Feet")
 ```
 
-{{< pagebreak >}}
+{{< pagebreak >}} 
+
 ### Autocorrelation
 
 ##### Overall
 
-Since a change of a cloud layer from 10,000 feet to 9,500 feet clearly is not the same as a change from 1,000 feet to 500 feet, we look at changes in the squre root of the altitude of the lowest cloud layer, taking clear skies or anything above 18,000 feet AGL as 18,000 feet.
+Since a change of a cloud layer from 10,000 feet to 9,500 feet clearly
+is not the same as a change from 1,000 feet to 500 feet, we look at
+changes in the squre root of the altitude of the lowest cloud layer,
+taking clear skies or anything above 18,000 feet AGL as 18,000 feet.
 
-Predicted changes in cloud layer on the median don't tend to get revised, but if they do get revidsed it's most often a reversion, whether for predicted increases or decreases:
+Predicted changes in cloud layer on the median don't tend to get
+revised, but if they do get revidsed it's most often a reversion,
+whether for predicted increases or decreases:
 
 ```{r clouds_lowest_autocorr, warning=FALSE}
 #| fig-cap: Changes in predicted lowest cloud layer vs. realization
@@ -724,7 +948,8 @@ print(
 
 ```
 
-We see similar effect sizes for the reversion of increases and decreases of predicted lowest cloud layer:
+We see similar effect sizes for the reversion of increases and decreases
+of predicted lowest cloud layer:
 
 ```{r clouds_lowest_autocorr_lm}
 clouds_lowest_autocorr <- clouds_lowest_autocorr %>%
@@ -734,10 +959,13 @@ clouds_lowest_autocorr <- clouds_lowest_autocorr %>%
 clouds_lowest_lm <- lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data=clouds_lowest_autocorr)
 summary(clouds_lowest_lm)
 ```
-{{< pagebreak >}}
+
+{{< pagebreak >}} 
+
 #### By year
 
-It appears that there is no significant change in autocorrelation patterns over the years:
+It appears that there is no significant change in autocorrelation
+patterns over the years:
 
 ```{r clouds_lowest_autocorr_year, warning=FALSE}
 #| fig-cap: Changes in predicted lowest cloud layer vs. realization by year
@@ -764,10 +992,13 @@ print(
 )
 ```
 
-{{< pagebreak >}}
+{{< pagebreak >}} 
+
 ##### By location
 
-We break down the tendency of changes in predicted visibility to revert by aerodrome. There in an interest West-to-East gradient in reversion of increases:
+We break down the tendency of changes in predicted visibility to revert
+by aerodrome. There in an interest West-to-East gradient in reversion of
+increases:
 
 ```{r clouds_lowest_autocorr_aerodrome_increase}
 #| fig-cap: Reversion of Increases in Predicted Visibility by Aerodrome
@@ -796,7 +1027,8 @@ plot_usmap(fill="grey") +
 
 ```
 
-For reversion of decreases, Florida and the Gulf Coast together with Wyoming form an interesting cluster of lower tendency to revert:
+For reversion of decreases, Florida and the Gulf Coast together with
+Wyoming form an interesting cluster of lower tendency to revert:
 
 ```{r clouds_lowest_autocorr_aerodrome_decrease}
 #| fig-cap: Reversion of Decreases in Predicted Visibility by Aerodrome
@@ -810,10 +1042,14 @@ plot_usmap(fill="grey") +
   scale_colour_gradientn(colours = heat.colors(10)) +
   labs(title = "Reversion of Decreases in Predicted Lowest Cloud Layer", colour="Reversion")
 ```
-{{< pagebreak >}}
+
+{{< pagebreak >}} 
+
 #### Reversion of predicted increases vs. decreases
 
-It appears there is indeed an anticorrelation between reversionary tendencies in changes to increases *vs.* decreases in predicted lowest cloud layer.
+It appears there is indeed an anticorrelation between reversionary
+tendencies in changes to increases *vs.* decreases in predicted lowest
+cloud layer.
 
 ```{r clouds_lowest_autocorr_aerodrome_increase_decrease}
 #| fig-cap: Reversion of predicted decrease vs. increase of lowest cloud layer by aerodrome
@@ -831,12 +1067,9 @@ ggplot(
 
 ```
 
+{{< pagebreak >}} 
 
-
-
-{{< pagebreak >}}
 ## Ceiling
-
 
 ### Summary Statistics
 
@@ -861,7 +1094,6 @@ For the ceiling, the pattern from the lowest cloud base repeats:
    )
 ```
 
-
 ```{r clouds_ceiling_map}
 #| fig-cap: Cloud Ceiling by Location
 clouds_ceiling_median <- lines %>% 
@@ -880,16 +1112,21 @@ plot_usmap(fill="grey") +
   labs(title = "Median Cloud Ceiling by Location", colour="Feet")
 ```
 
+{{< pagebreak >}} 
 
-{{< pagebreak >}}
 ### Autocorrelation
 
 ##### Overall
 
-Since a change of a cloud layer from 10,000 feet to 9,500 feet clearly is not the same as a change from 1,000 feet to 500 feet, we look at changes in the squre root of the altitude of the ceiling, taking clear skies or anything above 18,000 feet AGL as 18,000 feet.
+Since a change of a cloud layer from 10,000 feet to 9,500 feet clearly
+is not the same as a change from 1,000 feet to 500 feet, we look at
+changes in the squre root of the altitude of the ceiling, taking clear
+skies or anything above 18,000 feet AGL as 18,000 feet.
 
-Predicted changes in ceiling on the median don't tend to get revised, but if they do get revised it's most often a reversion, whether for predicted increases or decreases:
-  
+Predicted changes in ceiling on the median don't tend to get revised,
+but if they do get revised it's most often a reversion, whether for
+predicted increases or decreases:
+
 ```{r clouds_ceiling_autocorr, warning=FALSE}
 #| fig-cap: Changes in predicted ceiling cloud layer vs. realization
 clouds_ceiling_autocorr <- lines %>%
@@ -913,8 +1150,9 @@ print(
 
 ```
 
-For the ceiling, different from the lowest layer, we see somewhat of a tendency for decreases to revert more than increases do:
-  
+For the ceiling, different from the lowest layer, we see somewhat of a
+tendency for decreases to revert more than increases do:
+
 ```{r clouds_ceiling_autocorr_lm}
 clouds_ceiling_autocorr <- clouds_ceiling_autocorr %>%
   mutate(change_increase=pmax(change_from_previous, 0),
@@ -923,11 +1161,14 @@ clouds_ceiling_autocorr <- clouds_ceiling_autocorr %>%
 clouds_ceiling_lm <- lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data=clouds_ceiling_autocorr)
 summary(clouds_ceiling_lm)
 ```
-{{< pagebreak >}}
+
+{{< pagebreak >}} 
+
 #### By year
 
-It appears that there is no significant change in autocorrelation patterns over the years:
-  
+It appears that there is no significant change in autocorrelation
+patterns over the years:
+
 ```{r clouds_ceiling_autocorr_year, warning=FALSE}
 #| fig-cap: Changes in predicted ceiling cloud layer vs. realization by year
 #| fig-width: 10
@@ -953,11 +1194,15 @@ print(
 )
 ```
 
-{{< pagebreak >}}
+{{< pagebreak >}} 
+
 ##### By location
 
-We break down the tendency of changes in predicted ceiling to revert by aerodrome. In Florida, metropolitan California, West Texas, and Oklahoma we see clusters of an unusually low tendency of increases in predicted ceilings to revert:
-  
+We break down the tendency of changes in predicted ceiling to revert by
+aerodrome. In Florida, metropolitan California, West Texas, and Oklahoma
+we see clusters of an unusually low tendency of increases in predicted
+ceilings to revert:
+
 ```{r clouds_ceiling_autocorr_aerodrome_increase}
 #| fig-cap: Reversion of Increases in Predicted Visibility by Aerodrome
 #| fig-width: 5
@@ -985,8 +1230,9 @@ plot_usmap(fill="grey") +
 
 ```
 
-For reversion of decreases, we see a particular tendency for reversion in Dixieland and California:
-  
+For reversion of decreases, we see a particular tendency for reversion
+in Dixieland and California:
+
 ```{r clouds_ceiling_autocorr_aerodrome_decrease}
 #| fig-cap: Reversion of Decreases in Predicted Visibility by Aerodrome
 #| fig-width: 5
@@ -999,10 +1245,13 @@ plot_usmap(fill="grey") +
   scale_colour_gradientn(colours = heat.colors(10)) +
   labs(title = "Reversion of Decreases in Predicted ceiling Cloud Layer", colour="Reversion")
 ```
-{{< pagebreak >}}
+
+{{< pagebreak >}} 
+
 #### Reversion of predicted increases vs. decreases
 
-It appears there is an anticorrelation between reversionary tendencies in changes to increases *vs.* decreases in predicted ceiling.
+It appears there is an anticorrelation between reversionary tendencies
+in changes to increases *vs.* decreases in predicted ceiling.
 
 ```{r clouds_ceiling_autocorr_aerodrome_increase_decrease}
 #| fig-cap: Reversion of predicted decrease vs. increase of ceiling cloud layer by aerodrome
@@ -1020,9 +1269,8 @@ ggplot(
 
 ```
 
+{{< pagebreak >}} 
 
-
-{{< pagebreak >}}
 ## Visibility
 
 ### Summary Statistics
@@ -1036,7 +1284,8 @@ ggplot(
       ungroup()
 ```
 
-For visibility, six statute miles or better is by far the most predicted value:
+For visibility, six statute miles or better is by far the most predicted
+value:
 
 ```{r visibility_hist}
 #| fig-cap: Histogram of Visibility
@@ -1068,7 +1317,9 @@ plot_usmap(fill="grey") +
   labs(title = "Mean Visibility by Location", colour="S. Miles")
 ```
 
-The airports with the best visibility, by prediction (keeping in mind that the scale maxes out at 6, but not using the median since that would be just 6 for most aerodromes), are:
+The airports with the best visibility, by prediction (keeping in mind
+that the scale maxes out at 6, but not using the median since that would
+be just 6 for most aerodromes), are:
 
 ```{r visibility_max_stations}
 #| tbl-cap: Aerodromes with the highest predicted visibility
@@ -1082,7 +1333,8 @@ kable(head(
   digits = 4)
 ```
 
-The two airports in the contiguous United States with the lowest predicted visibility are both directly on the Pacific coast:
+The two airports in the contiguous United States with the lowest
+predicted visibility are both directly on the Pacific coast:
 
 ```{r visibility_min_stations}
 #| tbl-cap: Aerodromes with the lowest predicted visibility
@@ -1096,16 +1348,18 @@ kable(head(
   digits = 4)
 ```
 
+{{< pagebreak >}} 
 
-{{< pagebreak >}}
 ### Autocorrelation
 
 ##### Overall
 
-Since a change of visibility from 5 miles to 4.5 miles clearly is not the same as a change from 1 mile to 0.5 miles, we look at changes in the squre root of visibility.
+Since a change of visibility from 5 miles to 4.5 miles clearly is not
+the same as a change from 1 mile to 0.5 miles, we look at changes in the
+squre root of visibility.
 
-Improvements in predicted visibility do not tend to get revised, but decreases
-mostly get revised:
+Improvements in predicted visibility do not tend to get revised, but
+decreases mostly get revised:
 
 ```{r visibility_autocorr, warning=FALSE}
 #| fig-cap: Changes in predicted visibility vs. realization
@@ -1130,7 +1384,8 @@ print(
 
 ```
 
-We see a significantly larger effect size for the reversion of decreases in predicted visbility than for increases:
+We see a significantly larger effect size for the reversion of decreases
+in predicted visbility than for increases:
 
 ```{r visbility_autocorr_lm}
 visibility_autocorr <- visibility_autocorr %>%
@@ -1140,10 +1395,13 @@ visibility_autocorr <- visibility_autocorr %>%
 visibility_lm <- lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data=visibility_autocorr)
 summary(visibility_lm)
 ```
-{{< pagebreak >}}
+
+{{< pagebreak >}} 
+
 #### By year
 
-It appears that there is no significant change in autocorrelation patterns over the years:
+It appears that there is no significant change in autocorrelation
+patterns over the years:
 
 ```{r visibility_autocorr_year, warning=FALSE}
 #| fig-cap: Changes in predicted visibility vs. realization by year
@@ -1170,10 +1428,13 @@ print(
 )
 ```
 
-{{< pagebreak >}}
+{{< pagebreak >}} 
+
 ##### By location
 
-We break down the tendency of changes in predicted visibility to revert by aerodrome. Again, there are regional clusters whose meaning is not immediately obvious.
+We break down the tendency of changes in predicted visibility to revert
+by aerodrome. Again, there are regional clusters whose meaning is not
+immediately obvious.
 
 ```{r visibility_autocorr_aerodrome_increase}
 #| fig-cap: Reversion of Increases in Predicted Visibility by Aerodrome
@@ -1214,10 +1475,14 @@ plot_usmap(fill="grey") +
   scale_colour_gradientn(colours = heat.colors(10)) +
   labs(title = "Reversion of Decreases in Predicted Visibility", colour="Reversion")
 ```
-{{< pagebreak >}}
+
+{{< pagebreak >}} 
+
 #### Reversion of predicted increases vs. decreases
 
-For visibility, it appears there is indeed an anticorrelation between reversionary tendencies in changes to increases *vs.* decreases in predicted visibility.
+For visibility, it appears there is indeed an anticorrelation between
+reversionary tendencies in changes to increases *vs.* decreases in
+predicted visibility.
 
 ```{r visibility_autocorr_aerodrome_increase_decrease}
 #| fig-cap: Reversion of predicted decrease vs. increase of visibility by aerodrome
@@ -1235,9 +1500,9 @@ ggplot(
 
 ```
 
-{{< pagebreak >}}
+{{< pagebreak >}} 
+
 # References
 
 ::: {#refs}
 :::
-
