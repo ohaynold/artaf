@@ -32,7 +32,7 @@ number-sections: true
 number-depth: 3
 font-size: 10
 params:
-  data_set: "tiny_data"
+  data_set: "full_set"
 tbl-cap-location: bottom
 bibliography: bibliography.bibtex
 copyright:
@@ -455,7 +455,7 @@ correl_changes_goodness_display <- correl_changes_goodness %>%
   select(variable,term,reversion) %>%
   pivot_wider(names_from = term, values_from = reversion)
 
-colnames(correl_changes_goodness_display) <- c("Variable", "Reversion of increases", "Reversion of decreases")
+colnames(correl_changes_goodness_display) <- c("Variable", "Reversion of improvements", "Reversion of deteriorations")
 
 kable(correl_changes_goodness_display, digits = 2)
 ```
