@@ -328,7 +328,7 @@ involve a change between the previous prediction and the current prediction.
 We can now examine the changes in the TAFs.
 
 ```{r plot_changes_goodness, warning=FALSE}
-#| fig-cap: Changes in predicted goodness of weather conditions
+#| fig-cap: Autocorrelation of changes in predicted goodness of weather conditions
 
 # geom_boxplot gets unhappy about large datasets, so we presummarize
 changes_goodness_hist <- lines_goodness %>%
@@ -343,9 +343,9 @@ print(
     geom_boxplot(outliers = FALSE) +
     theme_bw() +
     labs(
-      title="Changes in predicted goodness vs. final",
-      x="Change from previous",
-         y="Change to final") +
+      title="Changes in Predicted Goodness vs. Final",
+      x="Change in predicted goodness from previous forecast",
+         y="Change to final forecast") +
     geom_abline(slope=-0.1, intercept=1.1, linetype=4) +
     scale_x_discrete(breaks=c(-1,-0.5,0,0.5,1), drop=FALSE) +
     facet_wrap(~variable)
@@ -435,7 +435,10 @@ a curious effect that worsening predictions in Wyoming seem to be significantly 
 reversed than in Montana or Colorado.
 
 ```{r reversion_goodness_decrease_place}
-#| fig-cap: Reversion of Decreases in Goodness by Aerodrome
+#| fig-cap: Reversion of worsened forecasts by aerodrome
+#| fig-width: 5
+#| fig-height: 3
+
 correl_changes_goodness_aerodrome <- lines_goodness %>%
   mutate(change_from_previous = current - previous,
          change_to_final = final - current) %>%
@@ -453,18 +456,21 @@ plot_usmap(fill="grey") +
   geom_sf(data=usmap_transform(correl_changes_goodness_aerodrome %>% filter(term=="change_decrease"), input_names = c("longitude", "latitude")),
              aes(colour=-estimate)) +
   scale_colour_gradientn(colours = heat.colors(10)) +
-  labs(title = "Reversion of Decreases in Predicted Goodness", colour="Reversion")
+  labs(title = "Reversion of Worsened Forecasts by Aerodrome", colour="Reversion")
 ```
 For reversions of improvements in predictions, a cluster of optimism around Boston stands out where
 improvements in predictions are much more likely to get reversed than in New York City:
 
 ```{r reversion_goodness_increase_place}
-#| fig-cap: Reversion of Increases in Goodness by Aerodrome
+#| fig-cap: Reversion of improved forecasts by aerodrome
+#| fig-width: 5
+#| fig-height: 3
+
 plot_usmap(fill="grey") +
   geom_sf(data=usmap_transform(correl_changes_goodness_aerodrome %>% filter(term=="change_increase"), input_names = c("longitude", "latitude")),
              aes(colour=-estimate)) +
   scale_colour_gradientn(colours = heat.colors(10)) +
-  labs(title = "Reversion of Increases in Predicted Goodness", colour="Reversion")
+  labs(title = "Reversion of Improved Forecasts by Aerodrome", colour="Reversion")
 ```
 # Conclusion
 
@@ -482,9 +488,9 @@ of the forecasts, the relationship between that evolution and enventual weather 
 
 # Detailed Data Analysis {#sec-detailed_data_analysis .appendix}
 
-## Wind Speed without Gusts
+## Wind speed without gusts
 
-### Summary Statistics
+### Summary statistics
 
 ```{r load_wind_speed}
   wind_speed_hist <- lines %>% 
@@ -501,11 +507,11 @@ Wind speeds are forecast at an average of
 knots.
 
 ```{r wind_speed_hist}
-#| fig-cap: Histogram of Wind Speeds
+#| fig-cap: Histogram of wind speeds
  print(
    ggplot(wind_speed_hist, aes(x=current)) + 
      geom_histogram(aes(weight=count), binwidth = 1) +
-     labs(title="Histogram of Wind Speeds", x="Wind Speed kts", y="Count") +
+     labs(title="Histogram of Wind Speeds", x="Wind speed, knots", y="Count") +
      coord_cartesian(xlim=c(0,50)) +
      theme_bw()
    )
@@ -521,12 +527,12 @@ round numbers. However, that relationship breaks down for the very small
 number of predictions exceeding 50 knots.
 
 ```{r wind_speed_hist_log, warning=FALSE}
-#| fig-cap: Histogram of Wind Speeds, log scale
+#| fig-cap: Histogram of wind speeds, log scale
 # Warning for zero counts giving negative infinity suppressed
  print(
    ggplot(wind_speed_hist %>% filter(current >= 10), aes(x=current)) + 
      geom_histogram(aes(weight=count), binwidth = 1) +
-     labs(title="Histogram of Wind Speeds", x="Wind Speed kts", y="Count") +
+     labs(title="Histogram of Wind Speeds", x="Wind Speed, knots", y="Count") +
      scale_y_log10() +
      theme_bw()
    )
@@ -534,13 +540,12 @@ number of predictions exceeding 50 knots.
 
 {{< pagebreak >}}
 
-##### By location
+##### By aerodrome
 
-By station location, we see the well-known wind corridor from the
-Dakotas to West Texas.
+We see the well-known wind corridor from the Dakotas to West Texas:
 
 ```{r wind_speed_map}
-#| fig-cap: Average Wind Forecast Speed by Location
+#| fig-cap: Average wind forecast speed by aerodrome
 wind_speed_avg <- lines %>% 
       filter(variable=="wind_speed") %>%
       group_by(aerodrome) %>%
@@ -554,7 +559,7 @@ plot_usmap(fill="grey") +
   geom_sf(data=usmap_transform(wind_speed_avg, input_names = c("longitude", "latitude")),
              aes(colour=current)) +
   scale_colour_gradientn(colours = heat.colors(10)) +
-  labs(title = "Average Wind Forecast Speed by Location", colour="Knots")
+  labs(title = "Average Wind Forecast Speed by Aerodrome", colour="Knots")
 ```
 
 The windiest airports, by prediction, are:
@@ -580,7 +585,7 @@ Reductions in predicted wind speeds do not tend to get revised, but
 increases mostly get revised:
 
 ```{r wind_speed_autocorr, warning=FALSE}
-#| fig-cap: Changes in predicted wind speed vs. realization
+#| fig-cap: Changes in predicted wind speed *vs.* final prediction
 wind_speed_autocorr <- lines %>%
   filter(variable=="wind_speed") %>%
   filter(previous <= 30, current <= 30, final <= 30) %>%
@@ -594,9 +599,9 @@ print(
     geom_boxplot() +
     theme_bw() +
     labs(
-      title="Changes in predicted wind speed vs. realization",
+      title="Changes in Predicted Wind Speed vs. Final Prediction",
       x="Change in predicted wind speed, knots",
-         y="Change from prediction to final value, knots") +
+         y="Change from prediction to final prediction, knots") +
     geom_abline(slope=-1, intercept=31, linetype=4) +
     scale_x_discrete(breaks=c(-30,-25,-20,-15,-10,-5,0,5,10,15,20,25,30), drop=FALSE)
 )
@@ -623,7 +628,7 @@ It appears that there is no significant change in autocorrelation
 patterns over the years:
 
 ```{r wind_speed_autocorr_year, warning=FALSE}
-#| fig-cap: Changes in predicted wind speed vs. realization by year
+#| fig-cap: Changes in predicted wind speed *vs.* final prediction by year
 #| fig-width: 10
 #| fig-height: 10
 wind_speed_autocorr_year <- lines %>%
@@ -640,9 +645,9 @@ print(
     geom_boxplot(outliers = FALSE) +
     theme_bw() +
     labs(
-      title="Changes in predicted wind speed vs. realization",
+      title="Changes in Predicted Wind Speed vs. Final Prediction",
       x="Change in predicted wind speed, knots",
-         y="Change from prediction to final value, knots") +
+         y="Change from prediction to final prediction, knots") +
     geom_abline(slope=-1, intercept=31, linetype=4) +
     scale_x_discrete(breaks=c(-30,-20,-10,0,10,20,30), drop=FALSE)
 )
@@ -650,14 +655,14 @@ print(
 
 {{< pagebreak >}} 
 
-##### By location
+##### By aerodrome
 
 We break down the tendency of changes in predicted wind speed to revert
 by aerodrome. We see some geographic clusters, though their meaning is
 not immediately obvious.
 
 ```{r wind_speed_autocorr_aerodrome_increase}
-#| fig-cap: Reversion of Increases in Predicted Wind Speed by Aerodrome
+#| fig-cap: Reversion of increases in predicted wind speed by aerodrome
 #| fig-width: 5
 #| fig-height: 3
 
@@ -684,7 +689,7 @@ plot_usmap(fill="grey") +
 ```
 
 ```{r wind_speed_autocorr_aerodrome_decrease}
-#| fig-cap: Reversion of Decreases in Predicted Wind Speed by Aerodrome
+#| fig-cap: Reversion of decreases in predicted wind speed by aerodrome
 #| fig-width: 5
 #| fig-height: 3
 
@@ -700,13 +705,13 @@ plot_usmap(fill="grey") +
 
 {{< pagebreak >}} 
 
-#### Reversion of predicted increases vs. decreases
+#### Reversion of predicted increases *vs.* decreases
 
 We do not see much correlation between reversionary tendencies for
 increases and decreases in predicted wind speed.
 
 ```{r wind_speed_autocorr_aerodrome_increase_decrease}
-#| fig-cap: Reversion of predicted decrease vs. increase of wind speed by aerodrome
+#| fig-cap: Reversion of predicted decrease *vs.* increase of wind speed by aerodrome
 
 ggplot(
   wind_speed_autocorr_aerodrome %>%
@@ -715,7 +720,7 @@ ggplot(
   aes(x=-change_increase, y=-change_decrease, label=aerodrome)) +
   geom_text(size=I(2)) +
   theme_bw() +
-  labs(title="Reversion of predicted decrease vs. increase of wind speed by aerodrome",
+  labs(title="Reversion of Predicted Decrease vs. Increase of Wind Speed by Aerodrome",
        x="Reversion of predicted increase",
        y="Reversion of predicted decrease")
 
@@ -723,9 +728,9 @@ ggplot(
 
 {{< pagebreak >}} 
 
-## Wind Speed with Gusts
+## Wind speed with gusts
 
-### Summary Statistics
+### Summary statistics
 
 #### Histogram
 
@@ -746,11 +751,11 @@ typical exponential decay interrupted between 13 and 25 knots, the
 proceeding as expected from 25 knots to 70 knots, and ceasing there:
 
 ```{r wind_speed_gust_hist}
-#| fig-cap: Histogram of Wind Speeds with Gust
+#| fig-cap: Histogram of wind speeds with gust
  print(
    ggplot(wind_speed_gust_hist, aes(x=current)) + 
      geom_histogram(aes(weight=count), binwidth = 1) +
-     labs(title="Histogram of Wind Speeds with Gust", x="Wind Speed with Gust kts", y="Count") +
+     labs(title="Histogram of Wind Speeds with Gust", x="Wind speed with gust, knots", y="Count") +
      coord_cartesian(xlim=c(0,50)) +
      theme_bw()
    )
@@ -761,11 +766,11 @@ proceeding as expected from 25 knots to 70 knots, and ceasing there:
 #### Extreme values
 
 ```{r wind_speed_gust_hist_log, warning=FALSE}
-#| fig-cap: Histogram of Wind Speeds, log scale
+#| fig-cap: Histogram of wind speeds with gust, log scale
  print(
    ggplot(wind_speed_gust_hist %>% filter(current >= 10), aes(x=current)) + 
      geom_histogram(aes(weight=count), binwidth = 1) +
-     labs(title="Histogram of Wind Speeds with Gust", x="Wind Speed with Gust kts", y="Count") +
+     labs(title="Histogram of Wind Speeds with Gust", x="Wind speed with gust, knots", y="Count") +
      scale_y_log10() +
      theme_bw()
    )
@@ -773,12 +778,12 @@ proceeding as expected from 25 knots to 70 knots, and ceasing there:
 
 {{< pagebreak >}} 
 
-##### By location
+##### By aerodrome
 
 The geographical distribution is as expected.
 
 ```{r wind_speed_gust_map}
-#| fig-cap: Average Wind Forecast Speed with Gust by Location
+#| fig-cap: Average wind forecast speed with gust by aerodrome
 wind_speed_gust_avg <- lines %>% 
       filter(variable=="wind_speed_with_gust") %>%
       group_by(aerodrome) %>%
@@ -792,7 +797,7 @@ plot_usmap(fill="grey") +
   geom_sf(data=usmap_transform(wind_speed_gust_avg, input_names = c("longitude", "latitude")),
              aes(colour=current)) +
   scale_colour_gradientn(colours = heat.colors(10)) +
-  labs(title = "Average Wind Forecast Speed with Gust by Location", colour="Knots")
+  labs(title = "Average Wind Forecast Speed with Gust by Aerodrome", colour="Knots")
 ```
 
 The windiest airports for winds including gusts, by prediction, are:
@@ -818,7 +823,7 @@ Reductions in predicted wind speeds do not tend to get revised, but
 increases mostly get revised:
 
 ```{r wind_speed_gust_autocorr, warning=FALSE}
-#| fig-cap: Changes in predicted wind speed vs. realization
+#| fig-cap: Changes in predicted wind speed *vs.* final prediction
 wind_speed_gust_autocorr <- lines %>%
   filter(variable=="wind_speed_with_gust") %>%
   filter(previous <= 30, current <= 30, final <= 30) %>%
@@ -832,7 +837,7 @@ print(
     geom_boxplot() +
     theme_bw() +
     labs(
-      title="Changes in predicted wind speed with gust vs. realization",
+      title="Changes in Predicted Wind Speed with Gust vs. Final Prediction",
       x="Change in predicted wind speed with gust, knots",
          y="Change from prediction to final value, knots") +
     geom_abline(slope=-1, intercept=31, linetype=4) +
@@ -861,7 +866,7 @@ It appears that there is no significant change in autocorrelation
 patterns over the years:
 
 ```{r wind_speed_gust_autocorr_year, warning=FALSE}
-#| fig-cap: Changes in predicted wind speed with gust vs. realization by year
+#| fig-cap: Changes in predicted wind speed with gust *vs.* final prediction by year
 #| fig-width: 10
 #| fig-height: 10
 wind_speed_gust_autocorr_year <- lines %>%
@@ -878,7 +883,7 @@ print(
     geom_boxplot(outliers = FALSE) +
     theme_bw() +
     labs(
-      title="Changes in predicted wind speed with gust vs. realization",
+      title="Changes in Predicted Wind Speed with Gust vs. Final Prediction",
       x="Change in predicted wind speed with gust, knots",
          y="Change from prediction to final value, knots") +
     geom_abline(slope=-1, intercept=31, linetype=4) +
@@ -888,14 +893,14 @@ print(
 
 {{< pagebreak >}} 
 
-##### By location
+##### By aerodrome
 
 There are some regional clusters for reversionary tendencies in
 predicted wind speed with gust, but their meaning is not immediately
 obvious.
 
 ```{r wind_speed_gust_autocorr_aerodrome_increase}
-#| fig-cap: Reversion of Increases in Predicted Wind Speed with Gust by Aerodrome
+#| fig-cap: Reversion of increases in predicted wind speed with gust by aerodrome
 #| fig-width: 5
 #| fig-height: 3
 
@@ -922,7 +927,7 @@ plot_usmap(fill="grey") +
 ```
 
 ```{r wind_speed_gust_autocorr_aerodrome_decrease}
-#| fig-cap: Reversion of Decreases in Predicted Wind Speed by Aerodrome
+#| fig-cap: Reversion of decreases in predicted wind speed by aerodrome
 #| fig-width: 5
 #| fig-height: 3
 
@@ -938,13 +943,13 @@ plot_usmap(fill="grey") +
 
 {{< pagebreak >}} 
 
-#### Reversion of predicted increases vs. decreases
+#### Reversion of predicted increases *vs.* decreases
 
 We do not see much correlation between reversionary tendencies for
 increases and decreases in predicted wind speed with gust.
 
 ```{r wind_speed_gust_autocorr_aerodrome_increase_decrease}
-#| fig-cap: Reversion of predicted decrease vs. increase of wind speed with gust by aerodrome
+#| fig-cap: Reversion of predicted decrease *vs.* increase of wind speed with gust by aerodrome
 
 ggplot(
   wind_speed_gust_autocorr_aerodrome %>%
@@ -953,7 +958,7 @@ ggplot(
   aes(x=-change_increase, y=-change_decrease, label=aerodrome)) +
   geom_text(size=I(2)) +
   theme_bw() +
-  labs(title="Reversion of predicted decrease vs. increase of wind speed with gust by aerodrome",
+  labs(title="Reversion of Predicted Decrease vs. Increase of Wind Speed with Gust by Aerodrome",
        x="Reversion of predicted increase",
        y="Reversion of predicted decrease")
 
@@ -961,9 +966,9 @@ ggplot(
 
 {{< pagebreak >}} 
 
-## Wind Speed Directional
+## Wind speed directional
 
-### Summary Statistics
+### Summary statistics
 
 ```{r load_wind_speed_directional}
   wind_speed_directional_hist <- lines %>% 
@@ -979,22 +984,22 @@ Northerly and easterly wind components are forecast at an average of
 knots. Patterns are as for wind speed:
 
 ```{r wind_speed_directional_hist}
-#| fig-cap: Histogram of Wind Speed Components
+#| fig-cap: Histogram of wind speed components
  print(
    ggplot(wind_speed_directional_hist, aes(x=abs(current))) + 
      geom_histogram(aes(weight=count), binwidth = 1) +
-     labs(title="Histogram of Wind Speed Components", x="Wind Speed Component kts", y="Count") +
+     labs(title="Histogram of Wind Speed Components", x="Wind speed component, knots", y="Count") +
      coord_cartesian(xlim=c(0,50)) +
      theme_bw()
    )
 ```
 
 ```{r wind_speed_directional_hist_log, warning=FALSE}
-#| fig-cap: Histogram of Wind Speed Components, log scale
+#| fig-cap: Histogram of wind speed components, log scale
  print(
    ggplot(wind_speed_directional_hist %>% filter(current >= 10), aes(x=current)) + 
      geom_histogram(aes(weight=count), binwidth = 1) +
-     labs(title="Histogram of Wind Speed Components", x="Wind Speed Component kts", y="Count") +
+     labs(title="Histogram of Wind Speed Components", x="Wind speed component, knots", y="Count") +
      scale_y_log10() +
      theme_bw()
    )
@@ -1013,7 +1018,7 @@ disappears and becomes more symmetrical. This is to be expected as
 directional wind speed has a sign.
 
 ```{r wind_speed_directional_autocorr, warning=FALSE}
-#| fig-cap: Changes in predicted wind speed component vs. realization
+#| fig-cap: Changes in predicted wind speed component *vs.* final prediction
 wind_speed_directional_autocorr <- lines %>%
   filter(variable %in% c("wind_north", "wind_east")) %>%
   filter(abs(previous) <= 30 & abs(current) <= 30 & abs(final) <= 30) %>%
@@ -1028,7 +1033,7 @@ print(
     geom_boxplot() +
     theme_bw() +
     labs(
-      title="Changes in predicted wind speed component vs. realization",
+      title="Changes in Predicted Wind Speed Component vs. Final Prediction",
       x="Change in predicted wind speed component, knots",
          y="Change from prediction to final value, knots") +
     geom_abline(slope=-1, intercept=31, linetype=4) +
@@ -1049,9 +1054,9 @@ summary(wind_speed_directional_lm)
 
 {{< pagebreak >}} 
 
-## Lowest Cloud Layer
+## Lowest cloud layer
 
-### Summary Statistics
+### Summary statistics
 
 ```{r load_clouds_lowest}
   clouds_lowest_hist <- lines %>% 
@@ -1068,11 +1073,11 @@ that, we see a decline of prediction frequency with increasing altitude,
 with peaks at the round numbers of 10,000 feet and 15,000 feet.
 
 ```{r clouds_lowest_hist}
-#| fig-cap: Histogram of Lowest Cloud Layer Base
+#| fig-cap: Histogram of lowest cloud layer base
  print(
    ggplot(clouds_lowest_hist, aes(x=abs(current))) + 
      geom_histogram(aes(weight=count), breaks=(-1:18) * 1000 + 500) +
-     labs(title="Histogram of lowest cloud layer base", x="Lowest Cloud Layer Base, feet", y="Count") +
+     labs(title="Histogram of Lowest Cloud Layer Base", x="Lowest cloud layer base, feet", y="Count") +
      theme_bw()
    )
 ```
@@ -1083,7 +1088,7 @@ the average since the top value of 18,000 that is also taken for clear
 skies is an arbitrary choice.
 
 ```{r clouds_lowest_map}
-#| fig-cap: Median Cloud Altitude by Location
+#| fig-cap: Median lowest cloud layer base by aerodrome
 clouds_lowest_median <- lines %>% 
       filter(variable=="clouds_lowest_base") %>%
       group_by(aerodrome) %>%
@@ -1097,7 +1102,7 @@ plot_usmap(fill="grey") +
   geom_sf(data=usmap_transform(clouds_lowest_median, input_names = c("longitude", "latitude")),
              aes(colour=current)) +
   scale_colour_gradientn(colours = topo.colors(30)) +
-  labs(title = "Median Lowest Cloud Layer Base by Location", colour="Feet")
+  labs(title = "Median Lowest Cloud Layer Base by Aerodrome", colour="Feet")
 ```
 
 {{< pagebreak >}} 
@@ -1116,7 +1121,7 @@ revised, but if they do get revidsed it's most often a reversion,
 whether for predicted increases or decreases:
 
 ```{r clouds_lowest_autocorr, warning=FALSE}
-#| fig-cap: Changes in predicted lowest cloud layer vs. realization
+#| fig-cap: Changes in predicted lowest cloud layer *vs.* final prediction
 clouds_lowest_autocorr <- lines %>%
   filter(variable=="clouds_lowest_base") %>%
   mutate(change_from_previous=sqrt(current)-sqrt(previous), change_to_final=sqrt(final)-sqrt(current)) %>%
@@ -1129,7 +1134,7 @@ print(
     geom_boxplot() +
     theme_bw() +
     labs(
-      title="Changes in predicted lowest cloud layer vs. realization",
+      title="Changes in Predicted Lowest Cloud Layer vs. Final Prediction",
       x="Change in predicted lowest cloud base, sqrt(feet)",
          y="Change from prediction to final value, sqrt(feet)") +
     geom_abline(slope=-0.1, intercept=2.1, linetype=4) +
@@ -1158,7 +1163,7 @@ It appears that there is no significant change in autocorrelation
 patterns over the years:
 
 ```{r clouds_lowest_autocorr_year, warning=FALSE}
-#| fig-cap: Changes in predicted lowest cloud layer vs. realization by year
+#| fig-cap: Changes in predicted lowest cloud layer *vs.* final prediction by year
 #| fig-width: 10
 #| fig-height: 10
 clouds_lowest_autocorr_year <- lines %>%
@@ -1174,7 +1179,7 @@ print(
     geom_boxplot(outliers = FALSE) +
     theme_bw() +
     labs(
-      title="Changes in predicted lowest cloud layer vs. realization",
+      title="Changes in Predicted Lowest Cloud Layer vs. Final Prediction",
       x="Change in predicted lowest cloud base, sqrt(feet)",
          y="Change from prediction to final value, sqrt(feet)") +
     geom_abline(slope=-0.1, intercept=2.1, linetype=4) +
@@ -1184,14 +1189,14 @@ print(
 
 {{< pagebreak >}} 
 
-##### By location
+##### By aerodrome
 
 We break down the tendency of changes in predicted visibility to revert
 by aerodrome. There in an interest West-to-East gradient in reversion of
 increases:
 
 ```{r clouds_lowest_autocorr_aerodrome_increase}
-#| fig-cap: Reversion of Increases in Predicted Visibility by Aerodrome
+#| fig-cap: Reversion of increases in lowest cloud layer by aerodrome
 #| fig-width: 5
 #| fig-height: 3
 
@@ -1221,7 +1226,7 @@ For reversion of decreases, Florida and the Gulf Coast together with
 Wyoming form an interesting cluster of lower tendency to revert:
 
 ```{r clouds_lowest_autocorr_aerodrome_decrease}
-#| fig-cap: Reversion of Decreases in Predicted Visibility by Aerodrome
+#| fig-cap: Reversion of decreases in predicted lowest cloud layer by aerodrome
 #| fig-width: 5
 #| fig-height: 3
 
@@ -1235,14 +1240,14 @@ plot_usmap(fill="grey") +
 
 {{< pagebreak >}} 
 
-#### Reversion of predicted increases vs. decreases
+#### Reversion of predicted increases *vs.* decreases
 
 It appears there is indeed an anticorrelation between reversionary
 tendencies in changes to increases *vs.* decreases in predicted lowest
 cloud layer.
 
 ```{r clouds_lowest_autocorr_aerodrome_increase_decrease}
-#| fig-cap: Reversion of predicted decrease vs. increase of lowest cloud layer by aerodrome
+#| fig-cap: Reversion of predicted decrease *vs.* increase of lowest cloud layer by aerodrome
 
 ggplot(
   clouds_lowest_autocorr_aerodrome %>%
@@ -1251,7 +1256,7 @@ ggplot(
   aes(x=-change_increase, y=-change_decrease, label=aerodrome)) +
   geom_text(size=I(2)) +
   theme_bw() +
-  labs(title="Reversion of predicted decrease vs. increase of lowest cloud layer by aerodrome",
+  labs(title="Reversion of Predicted Decrease vs. Increase of Lowest Cloud Layer by Aerodrome",
        x="Reversion of predicted increase",
        y="Reversion of predicted decrease")
 
@@ -1261,7 +1266,7 @@ ggplot(
 
 ## Ceiling
 
-### Summary Statistics
+### Summary statistics
 
 ```{r load_clouds_ceiling}
   clouds_ceiling_hist <- lines %>% 
@@ -1275,17 +1280,17 @@ ggplot(
 For the ceiling, the pattern from the lowest cloud base repeats:
 
 ```{r clouds_ceiling_hist}
-#| fig-cap: Histogram of Cloud Ceiling
+#| fig-cap: Histogram of ceilings
  print(
    ggplot(clouds_ceiling_hist, aes(x=abs(current))) + 
      geom_histogram(aes(weight=count), breaks=(-1:18) * 1000 + 500) +
-     labs(title="Histogram of cloud ceiling", x="Cloud Ceiling, feet", y="Count") +
+     labs(title="Histogram of Ceilings", x="Ceiling, feet", y="Count") +
      theme_bw()
    )
 ```
 
 ```{r clouds_ceiling_map}
-#| fig-cap: Cloud Ceiling by Location
+#| fig-cap: Median ceiling by aerodrome
 clouds_ceiling_median <- lines %>% 
       filter(variable=="clouds_ceiling") %>%
       group_by(aerodrome) %>%
@@ -1299,7 +1304,7 @@ plot_usmap(fill="grey") +
   geom_sf(data=usmap_transform(clouds_ceiling_median, input_names = c("longitude", "latitude")),
              aes(colour=current)) +
   scale_colour_gradientn(colours = topo.colors(30)) +
-  labs(title = "Median Cloud Ceiling by Location", colour="Feet")
+  labs(title = "Median Ceiling by Aerodrome", colour="Feet")
 ```
 
 {{< pagebreak >}} 
@@ -1318,7 +1323,7 @@ but if they do get revised it's most often a reversion, whether for
 predicted increases or decreases:
 
 ```{r clouds_ceiling_autocorr, warning=FALSE}
-#| fig-cap: Changes in predicted ceiling cloud layer vs. realization
+#| fig-cap: Changes in predicted ceiling *vs.* final prediction
 clouds_ceiling_autocorr <- lines %>%
   filter(variable=="clouds_ceiling") %>%
   mutate(change_from_previous=sqrt(current)-sqrt(previous), change_to_final=sqrt(final)-sqrt(current)) %>%
@@ -1331,8 +1336,8 @@ print(
     geom_boxplot() +
     theme_bw() +
     labs(
-      title="Changes in predicted ceiling cloud layer vs. realization",
-      x="Change in predicted ceiling cloud base, sqrt(feet)",
+      title="Changes in Predicted Ceiling vs. Final Prediction",
+      x="Change in predicted ceiling, sqrt(feet)",
       y="Change from prediction to final value, sqrt(feet)") +
     geom_abline(slope=-0.1, intercept=2.1, linetype=4) +
     scale_x_discrete(breaks=c(-125,-100,-75,-50,-25,0,25,50,75,100,125), drop=FALSE)
@@ -1360,7 +1365,7 @@ It appears that there is no significant change in autocorrelation
 patterns over the years:
 
 ```{r clouds_ceiling_autocorr_year, warning=FALSE}
-#| fig-cap: Changes in predicted ceiling cloud layer vs. realization by year
+#| fig-cap: Changes in predicted ceiling *vs.* final prediction by year
 #| fig-width: 10
 #| fig-height: 10
 clouds_ceiling_autocorr_year <- lines %>%
@@ -1376,7 +1381,7 @@ print(
     geom_boxplot(outliers = FALSE) +
     theme_bw() +
     labs(
-      title="Changes in predicted ceiling cloud layer vs. realization",
+      title="Changes in Predicted Ceiling Cloud Layer vs. Final Prediction",
       x="Change in predicted ceiling cloud base, sqrt(feet)",
       y="Change from prediction to final value, sqrt(feet)") +
     geom_abline(slope=-0.1, intercept=2.1, linetype=4) +
@@ -1386,7 +1391,7 @@ print(
 
 {{< pagebreak >}} 
 
-##### By location
+##### By aerodrome
 
 We break down the tendency of changes in predicted ceiling to revert by
 aerodrome. In Florida, metropolitan California, West Texas, and Oklahoma
@@ -1394,7 +1399,7 @@ we see clusters of an unusually low tendency of increases in predicted
 ceilings to revert:
 
 ```{r clouds_ceiling_autocorr_aerodrome_increase}
-#| fig-cap: Reversion of Increases in Predicted Visibility by Aerodrome
+#| fig-cap: Reversion of increases in predicted ceiling by aerodrome
 #| fig-width: 5
 #| fig-height: 3
 
@@ -1424,7 +1429,7 @@ For reversion of decreases, we see a particular tendency for reversion
 in Dixieland and California:
 
 ```{r clouds_ceiling_autocorr_aerodrome_decrease}
-#| fig-cap: Reversion of Decreases in Predicted Visibility by Aerodrome
+#| fig-cap: Reversion of decreases in predicted ceiling by aerodrome
 #| fig-width: 5
 #| fig-height: 3
 
@@ -1433,18 +1438,18 @@ plot_usmap(fill="grey") +
   geom_sf(data=usmap_transform(clouds_ceiling_autocorr_aerodrome %>% filter(term=="change_decrease"), input_names = c("longitude", "latitude")),
           aes(colour=-estimate)) +
   scale_colour_gradientn(colours = heat.colors(10)) +
-  labs(title = "Reversion of Decreases in Predicted ceiling Cloud Layer", colour="Reversion")
+  labs(title = "Reversion of Decreases in Predicted Ceiling", colour="Reversion")
 ```
 
 {{< pagebreak >}} 
 
-#### Reversion of predicted increases vs. decreases
+#### Reversion of predicted increases *vs.* decreases
 
 It appears there is an anticorrelation between reversionary tendencies
 in changes to increases *vs.* decreases in predicted ceiling.
 
 ```{r clouds_ceiling_autocorr_aerodrome_increase_decrease}
-#| fig-cap: Reversion of predicted decrease vs. increase of ceiling cloud layer by aerodrome
+#| fig-cap: Reversion of predicted decrease *vs.* increase of ceiling by aerodrome
 
 ggplot(
   clouds_ceiling_autocorr_aerodrome %>%
@@ -1453,7 +1458,7 @@ ggplot(
   aes(x=-change_increase, y=-change_decrease, label=aerodrome)) +
   geom_text(size=I(2)) +
   theme_bw() +
-  labs(title="Reversion of predicted decrease vs. increase of ceiling cloud layer by aerodrome",
+  labs(title="Reversion of Predicted Decrease vs. Increase of Ceiling by Aerodrome",
        x="Reversion of predicted increase",
        y="Reversion of predicted decrease")
 
@@ -1463,7 +1468,7 @@ ggplot(
 
 ## Visibility
 
-### Summary Statistics
+### Summary statistics
 
 ```{r load_visibility}
   visibility_hist <- lines %>% 
@@ -1478,7 +1483,7 @@ For visibility, six statute miles or better is by far the most predicted
 value:
 
 ```{r visibility_hist}
-#| fig-cap: Histogram of Visibility
+#| fig-cap: Histogram of visibility
  print(
    ggplot(visibility_hist, aes(x=abs(current))) + 
      geom_histogram(aes(weight=count), breaks = (-1:24) / 4 + 1/8) +
@@ -1490,7 +1495,7 @@ value:
 In the geographic distribution, we are seeing good visibility out West.
 
 ```{r visibility_map}
-#| fig-cap: Visibility by Location
+#| fig-cap: Mean visibility by aerodrome
 visibility_avg <- lines %>% 
       filter(variable=="visibility") %>%
       group_by(aerodrome) %>%
@@ -1504,7 +1509,7 @@ plot_usmap(fill="grey") +
   geom_sf(data=usmap_transform(visibility_avg, input_names = c("longitude", "latitude")),
              aes(colour=current)) +
   scale_colour_gradientn(colours = topo.colors(30)) +
-  labs(title = "Mean Visibility by Location", colour="S. Miles")
+  labs(title = "Mean Visibility by Aerodrome", colour="St. miles")
 ```
 
 The airports with the best visibility, by prediction (keeping in mind
@@ -1552,7 +1557,7 @@ Improvements in predicted visibility do not tend to get revised, but
 decreases mostly get revised:
 
 ```{r visibility_autocorr, warning=FALSE}
-#| fig-cap: Changes in predicted visibility vs. realization
+#| fig-cap: Changes in predicted visibility *vs.* final prediction
 visibility_autocorr <- lines %>%
   filter(variable=="visibility") %>%
   mutate(change_from_previous=sqrt(current)-sqrt(previous), change_to_final=sqrt(final)-sqrt(current)) %>%
@@ -1565,7 +1570,7 @@ print(
     geom_boxplot() +
     theme_bw() +
     labs(
-      title="Changes in predicted visibility vs. realization",
+      title="Changes in Predicted Visibility vs. Final Prediction",
       x="Change in predicted visibility, sqrt(statute miles)",
          y="Change from prediction to final value, sqrt(statute miles)") +
     geom_abline(slope=-0.1, intercept=2.1, linetype=4) +
@@ -1594,7 +1599,7 @@ It appears that there is no significant change in autocorrelation
 patterns over the years:
 
 ```{r visibility_autocorr_year, warning=FALSE}
-#| fig-cap: Changes in predicted visibility vs. realization by year
+#| fig-cap: Changes in predicted visibility *vs.* final prediction by year
 #| fig-width: 10
 #| fig-height: 10
 visibility_autocorr_year <- lines %>%
@@ -1610,7 +1615,7 @@ print(
     geom_boxplot(outliers = FALSE) +
     theme_bw() +
     labs(
-      title="Changes in predicted visibility vs. realization",
+      title="Changes in Predicted Visibility vs. Final Prediction",
       x="Change in predicted visibility, sqrt(statute miles)",
          y="Change from prediction to final value, sqrt(statute miles)") +
     geom_abline(slope=-0.1, intercept=2.1, linetype=4) +
@@ -1620,14 +1625,14 @@ print(
 
 {{< pagebreak >}} 
 
-##### By location
+##### By aerodrome
 
 We break down the tendency of changes in predicted visibility to revert
 by aerodrome. Again, there are regional clusters whose meaning is not
 immediately obvious.
 
 ```{r visibility_autocorr_aerodrome_increase}
-#| fig-cap: Reversion of Increases in Predicted Visibility by Aerodrome
+#| fig-cap: Reversion of increases in predicted visibility by aerodrome
 #| fig-width: 5
 #| fig-height: 3
 
@@ -1654,7 +1659,7 @@ plot_usmap(fill="grey") +
 ```
 
 ```{r visibility_autocorr_aerodrome_decrease}
-#| fig-cap: Reversion of Decreases in Predicted Visibility by Aerodrome
+#| fig-cap: Reversion of decreases in predicted visibility by aerodrome
 #| fig-width: 5
 #| fig-height: 3
 
@@ -1668,14 +1673,14 @@ plot_usmap(fill="grey") +
 
 {{< pagebreak >}} 
 
-#### Reversion of predicted increases vs. decreases
+#### Reversion of predicted increases *vs.* decreases
 
 For visibility, it appears there is indeed an anticorrelation between
 reversionary tendencies in changes to increases *vs.* decreases in
 predicted visibility.
 
 ```{r visibility_autocorr_aerodrome_increase_decrease}
-#| fig-cap: Reversion of predicted decrease vs. increase of visibility by aerodrome
+#| fig-cap: Reversion of predicted decrease *vs.* increase of visibility by aerodrome
 
 ggplot(
   visibility_autocorr_aerodrome %>%
@@ -1684,7 +1689,7 @@ ggplot(
   aes(x=-change_increase, y=-change_decrease, label=aerodrome)) +
   geom_text(size=I(2)) +
   theme_bw() +
-  labs(title="Reversion of predicted decrease vs. increase of visibility by aerodrome",
+  labs(title="Reversion of Predicted Decrease vs. Increase of Visibility by Aerodrome",
        x="Reversion of predicted increase",
        y="Reversion of predicted decrease")
 
