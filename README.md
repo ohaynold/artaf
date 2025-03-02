@@ -67,7 +67,11 @@ After you install the prerequisites, all that's required to set it up is to run 
 
 We provide the shell script [`runme.sh`](runme.sh) that runs the entire analysis  all in the correct order. 
 It downloads TAFs and then analyzes them (for now just by converting into a flat
-file for statistical analysis).
+file for statistical analysis). Thus, you should get the paper we published from a simple
+
+```commandline
+./runme.sh
+```
 
 On the first run, or whenever the directory `data\raw` does not exist, the script will obtain an [entire data set
 from Zenodo](https://zenodo.org/records/14954564). This a download of about 1.5 GB. Otherwise, for incremental updates
