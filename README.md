@@ -73,12 +73,12 @@ file for statistical analysis). Thus, you should get the paper we published from
 ./runme.sh
 ```
 
-On the first run, or whenever the directory `data\raw` does not exist, the script will obtain an [entire data set
+On the first run, or whenever the directory `data/raw` does not exist, the script will obtain an [entire data set
 from Zenodo](https://zenodo.org/records/14954564). This a download of about 1.5 GB. Otherwise, for incremental updates
 to the data set, it will obtain individual TAFs from [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/). 
 
 If you want to run on a very small dataset just to see that it functions, pass the command line arguments
-``--config tiny_data``. If you want to avoid the 1.5 GB download, create an empty directory `data\raw` first.
+``--config tiny_data``. If you want to avoid the 1.5 GB download, create an empty directory `data/raw` first.
 
 ## Options
 
