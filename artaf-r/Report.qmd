@@ -351,10 +351,12 @@ will inform us of the autocorrelations in changes of TAF predictions for the var
 transformed into goodness values to make them comparable.
 
 Overall, this gives us `r format(sum(lines_goodness$count[lines_goodness$variable=="wind_speed"]), big.mark=",")`
-observations of changes in TAFs for a given hour for each variable. Since most predictions span more than an hour, these observations are not independent (and, of course, even when the prediction changes between two
-hours, the predictions for these hours come out of the same forecasting process). Over all variables,
+observations of pair of changes in TAFs for a given hour for each variable, or `r format(sum(lines_goodness$count), big.mark=",")`
+pairs of changes overall. Since most predictions span more than an hour, these observations are not independent
+(and, of course, even when the prediction changes between two
+hours change, the predictions for these hours come out of the same forecasting process). Over all variables,
 `r format(sum(lines_goodness$count[lines_goodness$current!=lines_goodness$previous]), big.mark=",")` records
-involve a change between the previous prediction and the current prediction.
+involve a non-zero change between the previous prediction and the current prediction.
 
 {{< pagebreak >}}
 
