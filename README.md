@@ -38,6 +38,8 @@ To set up the project, clone the repository. You will also need all of the follo
    - (advanced use: PyPy for a speed gain)
 3. [R 4.4 or newer](https://cran.r-project.org/).
 4. [Rtools 4.4 or newer](https://cran.r-project.org/bin/windows/Rtools/rtools44/rtools.html)
+   The following packages may be required, depending on your setup and the availability of binary
+   packages:
    -  openssl dev package (required for compiling some R packages)
       - deb: libssl-dev (Debian, Ubuntu, etc)
       - rpm: openssl-devel (Fedora, CentOS, RHEL)
@@ -68,9 +70,12 @@ We provide the shell script [runme.sh](runme.sh) that runs the entire analysis (
 as of now) all in the correct order. It downloads TAFs and then analyzes them (for now just by converting into a flat
 file for statistical analysis).
 
+On the first run, or whenever the directory `data\raw` does not exist, the script will obtain an [entire data set
+from Zenodo](https://zenodo.org/records/14954564). This a download of about 1.5 GB. Otherwise, for incremental updates
+to the data set, it will obtain individual TAFs from [Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/). 
+
 If you want to run on a very small dataset just to see that it functions, pass the command line arguments
-``--config tiny_data``. If you're running the full dataset, we will download about 20 million TAFs, so give it a little 
-time and disk space. The full dataset will take about three hours to download and 800 MB of storage.
+``--config tiny_data``.
 
 ## Options
 

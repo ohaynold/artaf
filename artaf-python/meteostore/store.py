@@ -4,6 +4,7 @@ import datetime
 import os
 import os.path
 import re
+import tempfile
 import zipfile
 from collections import namedtuple
 
@@ -154,6 +155,44 @@ def _finish_download(year, file_path, tmp_dir_path, tmp_file_path):  # pragma: n
     os.rmdir(tmp_dir_path)
 
 
+# No coverage since this downloads a gigabyte of data
+def download_zenodo_taf_collection():  # pragma: no cover
+    """Before we go to Iowa State, let's get the full collection from Zenodo. This
+    collection was in turn bootstrapped from Iowa State."""
+
+    response = requests.get("https://zenodo.org/records/14954564/files/tafs.zip", timeout=60,
+                            stream=True)
+    response.raise_for_status()
+
+    with tempfile.TemporaryFile() as my_tempfile:
+        downloaded_bytes = 0
+        for chunk in response.iter_content(65536):
+            my_tempfile.write(chunk)
+            downloaded_bytes += len(chunk)
+            print(f"\rDownloaded {int(downloaded_bytes / 1024 / 1024)} MB...", end="",
+                  flush=True)
+        print(f"\rDownloaded {int(downloaded_bytes / 1024 / 1024)}MB...", end="",
+              flush=True)
+
+        os.makedirs(DATA_PATH, exist_ok=True)
+        with zipfile.ZipFile(my_tempfile, "r") as zip_in:
+            for name in zip_in.namelist():
+                if name == "tafs/":
+                    continue
+                if not name.startswith("tafs/"):
+                    raise ValueError("Got unexpected ZIP file member {name}")
+                stripped_name = name[len("tafs/"):]
+                print(f"\rExtracting {stripped_name}...", end="", flush=True)
+                with (zip_in.open(name, "r") as in_file,
+                      open(os.path.join(DATA_PATH, stripped_name), "wb") as out_file):
+                    while True:
+                        chunk = in_file.read(65536)
+                        if not chunk:
+                            break
+                        out_file.write(chunk)
+        print("\rExtracting done.                          ")
+
+
 # No coverage testing since the main risk is changes in the Web service itself and we don't
 # want to make permanent requests for testing
 def download_tafs(  # pylint: disable=too-many-locals
@@ -169,7 +208,11 @@ def download_tafs(  # pylint: disable=too-many-locals
     """
     station_codes, from_year, to_year = ensure_stations_years_sane(stations, from_year, to_year)
 
-    os.makedirs(DATA_PATH, exist_ok=True)
+    if not os.path.exists(DATA_PATH):
+        print("New installation. Getting initial dataset from Zenodo...")
+        download_zenodo_taf_collection()
+        print("Got data.")
+
     new_downloads = 0
 
     for year in range(from_year, to_year + 1):
@@ -203,7 +246,7 @@ def download_tafs(  # pylint: disable=too-many-locals
         _finish_download(year, file_path, tmp_dir_path, tmp_file_path)
 
     if new_downloads:
-        print(f"\rDownloaded {new_downloads} missing TAFs.            ")
+        print(f"\rDownloaded {new_downloads} missing TAFs from Iowa State.         ")
 
 
 _taf_file_re = re.compile(r"TAF[A-Z]{3}_(\d{4})(\d{2})(\d{2})(\d{2})(\d{2}).txt")

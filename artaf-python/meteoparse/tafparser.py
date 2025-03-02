@@ -133,7 +133,7 @@ class TafTreeTransformer(lark.Transformer):
         #    print(cloud_layer)
 
         return WeatherConditions(wind=wind, clouds=cloud_layers_group, visibility=visibility)
-        # TODO: Unroll TEMPO and PROB changes
+        # One could Unroll TEMPO and PROB changes here
 
     def wind_group(self, branches):
         """Parse wind, including direction and gust"""
