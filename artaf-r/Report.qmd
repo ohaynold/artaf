@@ -78,6 +78,8 @@ knitr::opts_chunk$set(echo = FALSE)
 ```
 
 \fancyhead[L]{`r if(params$data_set!="full_set"){paste("\\textbf{Incomplete data set ", knitr:::escape_latex(params$data_set), "}", sep="")}`}
+
+{{< pagebreak >}}
  
 Copyright © {{<meta copyright.year>}} by  {{<meta copyright.holder>}}. 
 
