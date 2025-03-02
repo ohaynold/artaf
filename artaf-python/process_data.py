@@ -71,8 +71,8 @@ def process_data():  # pragma: no cover
 
     def progress(tafs, hours, errors):
         """Display progress"""
-        print(f"\rProcessed {tafs:,} TAFs, {hours:,} station hours, "
-              f"encountered {errors:,} errors...",
+        print(f"\rRead {tafs:,} TAFs, {hours:,} st. hours, "
+              f"saw {errors:,} errors...",
               end="", flush=True)
 
     processor = analyzer.HourlyHistogramProcessor(

@@ -178,6 +178,7 @@ class HourlyHistogramProcessor:  # pylint: disable=too-many-instance-attributes
         self.error_writer = None
         self.processed_hours = 0
         self.processed_errors = 0
+        self.tafs_parsed = 0
         self.progress_callback = progress_callback
         self.output_queue = None
         self.parallel = parallel
@@ -274,7 +275,7 @@ class HourlyHistogramProcessor:  # pylint: disable=too-many-instance-attributes
         self.error_writer.writerow([message_text, error, hint])  # pragma: no cover
 
     @staticmethod
-    def _process_station(params, context):
+    def _process_station(params, context): # pylint: disable=too-many-locals
         station, year_from, year_to = params
         tafs = meteostore.get_tafs([station], year_from, year_to, read_only=True)
         station, station_tafs = next(tafs)
@@ -327,7 +328,7 @@ if __name__ == "__main__":
 
     def progress(tafs, hours, errors):
         """Display progress"""
-        print(f"\rProcessed {hours:,} station hours, encountered {errors:,} errors...",
+        print(f"\rProcessed {tafs:,} TAFs, {hours:,} hours, encountered {errors:,} errors...",
               end="", flush=True)
 
 

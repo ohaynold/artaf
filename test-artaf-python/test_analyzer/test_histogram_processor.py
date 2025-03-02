@@ -11,9 +11,10 @@ class TestHourlyHistogramProcessor:  # pylint: disable=too-few-public-methods
     """Test analyzer.HourlyHistogramProcessor"""
 
     @staticmethod
-    def _nada_callback(processed_hours, _):
+    def _nada_callback(processed_tafs, processed_hours, _):
         """Just a function to pass as a callback that does nothing to exercise the callback
         functionality"""
+        assert processed_tafs == int(processed_tafs)
         assert processed_hours == int(processed_hours)
 
     def test_parallel(self):
