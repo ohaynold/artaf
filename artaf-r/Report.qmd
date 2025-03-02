@@ -86,7 +86,7 @@ Copyright © {{<meta copyright.year>}} by  {{<meta copyright.holder>}}.
 {{<meta license.text>}} The full license is available at [{{<meta license.url>}}]({{<meta license.url>}}).
 
 This paper and the program code that makes it were written for the CAS 502: Fundamentals of Complex Systems Science: Computation
-course at Arizona State University in the Spring semester 2025.
+course at Arizona State University in the spring semester 2025.
 
 ```{r load_data}
 lines <- read_csv(file.path("../data/histograms/",params$data_set ,"/hist YearlyStations.csv.zip"),
@@ -263,6 +263,10 @@ Wind speed without gusts
 Wind speed with gusts
 : in knots, the gust speed if given, otherwise the wind speed
 
+Gust spread
+: in knots
+
+
 Wind speed directional
 : in knots, the northerly and easterly components of the wind speed
 
@@ -297,7 +301,7 @@ wind_goodness<- function(wind_speed) {
   (1 - 1 / (1 + exp(-0.25 * (wind_speed - 15)))) / (1 - 1 / (1 + exp(-0.25 * (0 - 15)))) 
   } 
 gust_goodness<- function(gust_spread) { 
-  (1 - 1 / (1 + exp(-0.3 * (gust_spread - 6)))) / (1 - 1 / (1 + exp(-0.3 * (0 - 6)))) 
+  (1 - 1 / (1 + exp(-0.3 * (gust_spread - 8)))) / (1 - 1 / (1 + exp(-0.3 * (0 - 8)))) 
   } 
 cloud_goodness<- function(altitude) { 
   ((1 / (1 + exp(-0.1 * (sqrt(altitude) - 40)))) - (1 / (1 + exp(-0.1 * (0 - 40))))) /  ((1 / (1 + exp(-0.1 * (sqrt(18000) - 40)))) - (1 / (1 + exp(-0.1 * (0 - 40)))))
