@@ -134,7 +134,7 @@ class HourlyHistogramKeeper:  # pylint: disable=too-many-instance-attributes
 
 
 # This does indeed get called in the unit test, but only by the parallel threads
-class ParallelContext: # pragma: no cover
+class ParallelContext:  # pragma: no cover
     """This is a placeholder class for HourlyHistogramProcessor that can get pickled and passed
     to different processes in parallel processing."""
 
@@ -148,9 +148,9 @@ class ParallelContext: # pragma: no cover
         """Remote access to HourlyHistogramProcessor.receive_output"""
         self.output_queue.put(("receive_output", (ascending_group, counts, job_index)))
 
-    def progress(self, station_processed_hours, station_processed_errors):
+    def progress(self, station_processed_tafs, station_processed_hours, station_processed_errors):
         """Remote access to HourlyHistogramProcessor.progress"""
-        self.output_queue.put(("progress", (station_processed_hours,
+        self.output_queue.put(("progress", (station_processed_tafs, station_processed_hours,
                                             station_processed_errors)))
 
     def write_error(self, message_text, error, hint):
@@ -166,7 +166,8 @@ class HourlyHistogramProcessor:  # pylint: disable=too-many-instance-attributes
         Make a new processor
         :param jobs: A list of HourlyHistogramJob objects
         :param output_dir: the directory in which to write output
-        :param progress_callback: a function(hours_parsed, errors_encountered) to display progress
+        :param progress_callback: a function(tafs_parsed, hours_parsed, errors_encountered) to
+        display progress
         :param parallel: Process in parallel
         """
         self.jobs = jobs
@@ -196,6 +197,7 @@ class HourlyHistogramProcessor:  # pylint: disable=too-many-instance-attributes
 
             self.processed_hours = 0
             self.processed_errors = 0
+            self.tafs_parsed = 0
 
             # map() is a generator -- list forces evaluation
             evaluations = [(s, year_from, year_to) for s in stations]
@@ -220,6 +222,13 @@ class HourlyHistogramProcessor:  # pylint: disable=too-many-instance-attributes
                 context = self
                 for e in evaluations:
                     self._process_station(e, context)
+        with (open(os.path.join(self.output_dir, "processing_stats.csv"), "w", encoding="ascii") as
+              stats_file):
+            writer = csv.writer(stats_file)
+            writer.writerow(["statistic", "value"])
+            writer.writerow(["tafs_processed", self.tafs_parsed])
+            writer.writerow(["hours_processed", self.processed_hours])
+            writer.writerow(["errors", self.processed_errors])
 
     def _initialize_output_files(self, exit_stack):
         self.out_files = [
@@ -251,24 +260,33 @@ class HourlyHistogramProcessor:  # pylint: disable=too-many-instance-attributes
                       [field_name, prev, curr, final, ncount]
             self.out_writers[job_index].writerow(new_row)
 
-    def progress(self, station_processed_hours, station_processed_errors):
+    def progress(self, tafs_parsed, station_processed_hours, station_processed_errors):
         """Receive a progress message to be displayed"""
+        self.tafs_parsed += tafs_parsed
         self.processed_hours += station_processed_hours
         self.processed_errors += station_processed_errors
         if self.progress_callback is not None:
-            self.progress_callback(self.processed_hours, self.processed_errors)
+            self.progress_callback(self.tafs_parsed, self.processed_hours, self.processed_errors)
 
     def write_error(self, message_text, error, hint):
         """Receive a parse error to be logged"""
         # Fine not to exercise this in a tiny test data set
-        self.error_writer.writerow([message_text, error, hint]) # pragma: no cover
+        self.error_writer.writerow([message_text, error, hint])  # pragma: no cover
 
     @staticmethod
     def _process_station(params, context):
         station, year_from, year_to = params
         tafs = meteostore.get_tafs([station], year_from, year_to, read_only=True)
         station, station_tafs = next(tafs)
-        parsed_tafs = meteoparse.parse_tafs(station_tafs)
+        tafs_processed = 0
+
+        def count_tafs(my_tafs):
+            nonlocal tafs_processed
+            for taf in my_tafs:
+                tafs_processed += 1
+                yield taf
+
+        parsed_tafs = count_tafs(meteoparse.parse_tafs(station_tafs))
         expanded_tafs = meteoparse.regularize_tafs(parsed_tafs)
         arranged_forecasts = arrange_by_hour_forecast(expanded_tafs, station.station)
         station_processed_hours_total = 0
@@ -281,22 +299,25 @@ class HourlyHistogramProcessor:  # pylint: disable=too-many-instance-attributes
                     k.process_hourly_group(hourly_data)
                 station_processed_hours_total += 1
                 if station_processed_hours_total % context.show_progress_after == 0:
-                    context.progress(context.show_progress_after, station_processed_errors)
+                    context.progress(tafs_processed, context.show_progress_after,
+                                     station_processed_errors)
                     station_processed_errors = 0
+                    tafs_processed = 0
                 if (context._abort_after is not None  # pylint: disable=protected-access
                         and station_processed_hours_total ==
                         context._abort_after):  # pylint: disable=protected-access
                     break
             # Fine not to exercise these in a tiny test dataset
-            elif isinstance(hourly_data, meteoparse.TafParseError): # pragma: no cover
+            elif isinstance(hourly_data, meteoparse.TafParseError):  # pragma: no cover
                 context.write_error(str(hourly_data.message_text), str(hourly_data.error),
                                     str(hourly_data.hint))
                 station_processed_errors += 1
-            else: # pragma: no cover
+            else:  # pragma: no cover
                 raise TypeError("Unexpected message type encountered.")
         for k in keepers:
             k.flush()
-        context.progress(station_processed_hours_total % context.show_progress_after,
+        context.progress(tafs_processed, station_processed_hours_total %
+                         context.show_progress_after,
                          station_processed_errors)
 
 
@@ -304,7 +325,7 @@ if __name__ == "__main__":
     my_jobs = analyzer.jobs.DEFAULT_JOBS
 
 
-    def progress(hours, errors):
+    def progress(tafs, hours, errors):
         """Display progress"""
         print(f"\rProcessed {hours:,} station hours, encountered {errors:,} errors...",
               end="", flush=True)
