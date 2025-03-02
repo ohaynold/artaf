@@ -139,8 +139,8 @@ home?)
 Research in psychology, financial markets, behavioral economics, and
 related field has created an abundance of evidence that humans do not
 tend to update their forecasts of future events with optimal efficiency
-in the sense of a Bayesian update. The direction of such biases found
-appears inconsistent, however. The literature provides ample evidence
+in the sense of a Bayesian update. However, the direction of these biases
+appears inconsistent. The literature provides ample evidence
 for humans being too conservative in their updates, *i.e.,* not taking
 new information fully into account, and well as for being too aggressive
 in their updates. [@ward1968; @griffin1992; @barberis1998;
@@ -169,10 +169,10 @@ false forecast of dry weather than they get at a false forecast of rain.
 If this is so, the forecaster may well advance consumer happiness and
 thus his career by exhibiting a bias for forecasting rain.
 
-Studies about biases in weather forecasts have typically looked at bias
-in the forecasts rather than bias in the updates to forecasts, but one
-can easily hypothesize similar incentives for bias in updating
-forecasts. For example, if consumers of a forecast are unhappy about the
+Studies on weather forecast biases have typically focused on biases in the 
+forecasts themselves rather than in their updates. However, one can easily 
+hypothesize similar incentives for biases in forecast updates. For example, 
+if consumers of a forecast are unhappy about the
 forecast changing often, it may be a wise career move for the forecaster
 only to update his forecast once he is reasonably sure that he will not
 have to revise it back.
@@ -520,7 +520,7 @@ there is grounds for hope that the improvement will hold.
 While TAFs have some power of their own, in particular with respect to flights under instruments rules being
 allowed to take off, what matters most, of course, is not what the final TAF issued for a place and time looks
 like, but how the weather actually turned out. From the interesting patterns we have seen in the evolution
-of the forecasts, the relationship between that evolution and enventual weather realizations might be a fertile field for another study.
+of the forecasts, the relationship between that evolution and eventual weather realizations might be a fertile field for another study.
 
 {{< pagebreak >}}
 
