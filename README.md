@@ -13,7 +13,7 @@ Pilots rely on [Terminal Aerodrome Forecasts](https://en.wikipedia.org/wiki/Term
 published typically every six hours for about 700 airports in the United States. Although these forecasts rely on
 computer models, they still involve significant human judgment and are prepared by meteorologists. In the verbal
 discussions accompanying the formal forecasts, the meteorologists sometimes make mention of "not yet" including or
-changing something they foresee since they're not certain enough yet to find doing so worthwhile.
+changing something they foresee  since there isn't enough certainty yet.
 
 The purpose of this program is to see if we can find evidence of the meteorologists being too conservative (or too
 aggressive) in incorporating new information as it becomes available. That is to say, we'd like to see whether there is

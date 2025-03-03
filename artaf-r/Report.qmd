@@ -126,8 +126,7 @@ every six hours for about 700 airports in the United States.[@ac0045H;
 involve significant human judgment and are prepared by meteorologists.
 In the verbal discussions accompanying the formal forecasts, the
 meteorologists sometimes make mention of "not yet" including or changing
-something they foresee since they're not certain enough yet to find
-doing so worthwhile.
+something they foresee since there isn't enough certainty yet.
 
 We want to see if we can find evidence of the meteorologists being too
 conservative or too aggressive in incorporating new information as it
@@ -150,8 +149,9 @@ in the sense of a Bayesian update. However, the direction of these biases
 appears inconsistent. The literature provides ample evidence
 for humans being too conservative in their updates, *i.e.,* not taking
 new information fully into account, and well as for being too aggressive
-in their updates. [@ward1968; @griffin1992; @barberis1998;
-@kahneman1973; @debondt1985; @daniel1998] We can define an efficent
+in their updates, with a variety of explanations of both phenomena.
+[@ward1968; @griffin1992; @barberis1998; @kahneman1973; @debondt1985;
+@daniel1998] We can define an efficent
 forecast as one that takes into account all information available at the
 time the forecast is made. [@nordhaus1987; @coibion2012] If a forecast
 is efficient in this sense, there is no additional information to be
@@ -174,29 +174,48 @@ umbrella than they are about taking an umbrella needlessly.
 Consequently, they may get unhappier at the weather forecaster for a
 false forecast of dry weather than they get at a false forecast of rain.
 If this is so, the forecaster may well advance consumer happiness and
-thus his career by exhibiting a bias for forecasting rain.
+thus his career by exhibiting a bias for forecasting rain. Indeed, we may
+conversely view the equivalent martingale measure of risk-neutral asset
+pricing as a consenses 'wet bias' negotiated through trading applied to the 
+real-world probability space of outcomes.
 
 Studies on weather forecast biases have typically focused on biases in the 
-forecasts themselves rather than in their updates. However, one can easily 
+forecasts themselves rather than in their updates. [@baars2005] However, 
+one can easily 
 hypothesize similar incentives for biases in forecast updates. For example, 
 if consumers of a forecast are unhappy about the
 forecast changing often, it may be a wise career move for the forecaster
 only to update his forecast once he is reasonably sure that he will not
-have to revise it back.
+have to revise it back. One qualitative study found that at least for the 
+special case of emergency situations, "once NWS forecasters have issued a 
+forecast or warning, they generally prefer to update the product only if doing
+so will provide substantial new information to aid decision making," *i.e.,* 
+conservative bias in updates [@morss2007].
 
 If forecasters are too aggressive or too conservative in updating
 forecasts, we should expect to see serial autocorrelations in the
 changes to their forecasts for the same event made over time. For
 example, if a forecast gets updated from 10 knots of wind to 15 knots,
 then if the forecaster is conservative, we might expect to see the next
-forecast for the same place and time to go to 17 knots. Conversely, if
-the forecaster is too aggressive in his updates, we might expect the
+forecast for the same place and time to go to 17 knots. Of course, this view
+gets challenged if the forecaster simply does not update his forecast at all
+and prefers to leave it unchanged until the change in predictions is large enough
+that he has to include it. In that case, we'd simply see the change as an innovation
+when it is finally included without seeing autocorrelation to a prior change
+that was too small to cause any update to be reflected in the forecast. Conversely, if
+the forecaster is too aggressive in his updates in the same scenario, we might expect the
 next forecast, as the forecast period draws nearer and more information
-gets revealed, to update his forecast back to 13 knots.
+gets revealed, to update his prediction back to 13 knots.
+
+While the National Weather Service publishes some of its guidance for meteorologists
+writing TAFs as well as informal explanations, these do not seem to include any
+formal guidance on a wet bias or pricing kernel to apply to forecasts, *i.e.,* there
+seems to be no formal, published policy of over- or underweighting the likelihood of certain
+events. [@nwsi10813; @graf2004]
 
 It would also seem plausible for the forecaster to exhibit different
 degrees of conservatism and aggression in updating forecasts with good
-news and bad news. We may call a bias that is overresponds to bad news
+news and bad news. We may call a bias that overresponds to bad news
 and underresponds to good news pessimistic; conversely, we may call a
 bias that underresponds to bad news and overresponds to good news
 optimistic. Of course, this classification only makes sense if updates
@@ -222,13 +241,13 @@ Our research question then becomes: Can we find evidence of bias in changes to T
 that manifest in autocorrelation of these changes for the same time and place? If so, which of our
 stylized biases does this bias belong to? Does the answer change for different variables? Does the answer change over time?
 
-If should be noted that our question as posed does not directly answer anything about whether
+It should be noted that our question as posed does not directly answer anything about whether
 the forecasts of the TAFs come true. That would require looking at actual weather
-realizations, such as reported in METARs. We can thus not distinguish how autocorrelative bias
+realizations, such as reported in METARs. We can thus not say how autocorrelative bias
 in TAFs, if any, relates to the eventual realizations. Forecasters could, for example,
 be loath to include weather changes they have not previously forecast in a TAF, even if
 they are already reported in the METAR (and some pilots would claim anecdotal evidence
-for this to be true). We merely can show whether knowledge of the history of the TAF predictions
+for this being true). We merely can show whether knowledge of the history of the TAF predictions
 for a given time and place adds any information to what the final TAF prediction will likely
 look like, whether or not that actually corresponds to the weather realization.
 
@@ -239,12 +258,13 @@ is available at [DOI 10.5281/zenodo.14954562](https://doi.org/10.5281/zenodo.149
 
 ## Data acquisition
 We ran our analysis for the `r sprintf("%d", dim(stations)[1])` aerodromes for which the National Weather Service
-published TAFs at the end of 2024. We built a downloader to obtain these TAFs from the archive at [Iowa State University's Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/) and made a data set from 1997 through 2024 available at [DOI 10.5281/zenodo.14954564](https://doi.org/10.5281/zenodo.14954564).The United States changed its TAF format as well as the forecast range on 5 November 2008. [@sc0846] In order to avoid a break in our data set from this change, we limit our analysis to the years from 2010 through 2024.
+published TAFs at the end of 2024. We built a downloader to obtain these TAFs from the archive at [Iowa State University's Iowa Environmental Mesonet](https://mesonet.agron.iastate.edu/) and made a data set from 1997 through 2024 available at [DOI 10.5281/zenodo.14954564](https://doi.org/10.5281/zenodo.14954564). The United States changed its TAF format as well as the forecast range on 5 November 2008. [@sc0846] In order to avoid a break in our data set from this change, we limit our analysis to the years from 2010 through 2024.
 
 We parsed `r format(processing_stats$value[processing_stats$statistic=="tafs_processed"], big.mark=",")` TAFs and encountered
 `r format(processing_stats$value[processing_stats$statistic=="errors"], big.mark=",")` errors. By the structure of our error reporting, one TAF
 may generate more than one error. Inspection of the error logs of unparsable
-TAFs shows that the problems are indeed with the TAFs. With an error rate this low, we did not attempt to engage in any further cleanup
+TAFs shows that the problems are indeed with the TAFs, or with their transmission and storage before we obtained them.
+With an error rate this low, we did not attempt to engage in any further cleanup
 of TAFs with syntax errors and felt it safer to exclude these from our analysis.
 
 We also did not consider TEMPO and PROB elements in TAFs. PROB groups are not used for the first nine hours of a forecast, and after that
@@ -255,7 +275,9 @@ analysis in hourly intervals, we felt it safest to leave them out as well.
 
 ## Variables considered
 
-For our analyses, we parsed the TAFs we obtained and looked at the most pertient (semi-)continous variables for flight/no flight decisions:
+For our analyses, we parsed the TAFs we obtained and looked at the most pertinent 
+(semi-, since they are reported as integers with rounding) continous variables 
+for flight/no flight decisions:
 
 Wind speed without gusts
 : in knots
@@ -271,18 +293,20 @@ Wind speed directional
 : in knots, the northerly and easterly components of the wind speed
 
 Lowest cloud layer
-: in feet, the lowest cloud layer of any extent, taking clear skies at 18,000 feet
+: in feet, the lowest cloud layer of any extent, taking clear skies as 18,000 feet
 
 Ceiling
-: in feet, the lowest cloud layer that is at least broken, taking clear skies at 18,000 feet
+: in feet, the lowest cloud layer that is at least broken, taking clear skies as 18,000 feet
 
 Visibility
 : in statute miles, with a maximum value of 6 miles for unobstructed visibility
 
-Other variables may certainly be of importance, including binary ones like the forecast presence of thunderstorms, but we hope that these continuous variables will gives us a good data set from which
+Other variables may certainly be of importance, including binary ones like the forecast presence of 
+thunderstorms or cumulonimbus clouds, but we hope that these continuous variables will gives us a good data set from which
 to analyze biases in forecast changes.
 
-We show a detailed analysis of those data, both cross-sectional and autocorrelations of changes, in their original units in section @sec-detailed_data_analysis. 
+We show a detailed analysis of those data, both summaries and autocorrelations of changes, in their 
+original units in section @sec-detailed_data_analysis. 
 
 ## Quality transformation
 
@@ -298,7 +322,7 @@ We then transform our variables by sigmoid curves as follows:
 
 ```{r goodness_functions}
 wind_goodness<- function(wind_speed) { 
-  (1 - 1 / (1 + exp(-0.25 * (wind_speed - 15)))) / (1 - 1 / (1 + exp(-0.25 * (0 - 15)))) 
+  (1 - 1 / (1 + exp(-0.15 * (wind_speed - 18)))) / (1 - 1 / (1 + exp(-0.15 * (0 - 18)))) 
   } 
 gust_goodness<- function(gust_spread) { 
   (1 - 1 / (1 + exp(-0.3 * (gust_spread - 8)))) / (1 - 1 / (1 + exp(-0.3 * (0 - 8)))) 
@@ -307,10 +331,9 @@ cloud_goodness<- function(altitude) {
   ((1 / (1 + exp(-0.1 * (sqrt(altitude) - 40)))) - (1 / (1 + exp(-0.1 * (0 - 40))))) /  ((1 / (1 + exp(-0.1 * (sqrt(18000) - 40)))) - (1 / (1 + exp(-0.1 * (0 - 40)))))
   } 
 visibility_goodness<- function(miles) { 
-   ((1 / (1 + exp(-1 * (sqrt(miles) - 1.7)))) - (1 / (1 + exp(-1 * (0 - 1.7))))) /  ((1 / (1 + exp(-1 * (sqrt(6) - 1.7)))) - (1 / (1 + exp(-1 * (0 - 1.7)))))
+   ((1 / (1 + exp(-1 * (sqrt(miles) - 1.8)))) - (1 / (1 + exp(-1 * (0 - 1.8))))) /  ((1 / (1 + exp(-1 * (sqrt(6) - 1.8)))) - (1 / (1 + exp(-1 * (0 - 1.8)))))
   } 
 ```
-
 
 Wind speed, with and without gusts:
 : Goodness of 
@@ -345,6 +368,17 @@ Visibility
   `r sprintf("%.2f", visibility_goodness(3))` for 3 statute miles, and
   `r sprintf("%.2f", visibility_goodness(6))` for unlimited visibility. 
 
+We do not assign a goodness to directional wind speed as that would depend on the alignment
+of available runways (which is non-random, since they tend to be aligned with prevailing wind,
+if possible).
+
+The choice of these particular mappings is certainly somewhat arbitrary and much depends on kind of
+flight operation, equipment, pilot experience, time, place, *etc.*, but they should give a somewhat
+intuitive and reasonable mapping of different observations on a scale between horrible and perfect. After all,
+the TAFs themselves also are not written toward one specific flight operation, but for general use for everyone
+between a powered parachute and a cargo 747. At any rate, we shall see patterns that appear robust to some
+amount of rescaling of these mappings.
+
 
 ```{r goodness_transform}
 lines_goodness <- bind_rows(
@@ -375,7 +409,7 @@ lines_goodness <- bind_rows(
 
 We divide each TAF into hourly predictions for its prediction range. This will give us for each
 aerodrome and each hour a number of predictions. For all but the first and last of these predictions, we
-form triplets for each variables comprising the previously predicted value, the currently predicted value,
+form triplets for each variable comprising the previously predicted value, the currently predicted value,
 and the value of the prediction in the final TAF issued for the hour in question.
 
 We then take first differences as the change from the previous TAF to the current TAF as well as for the
@@ -384,7 +418,7 @@ will inform us of the autocorrelations in changes of TAF predictions for the var
 transformed into goodness values to make them comparable.
 
 Overall, this gives us `r format(sum(lines_goodness$count[lines_goodness$variable=="wind_speed"]), big.mark=",")`
-observations of pair of changes in TAFs for a given hour for each variable, or `r format(sum(lines_goodness$count), big.mark=",")`
+observations of pairs of changes in TAFs for a given hour for each variable, or `r format(sum(lines_goodness$count), big.mark=",")`
 pairs of changes overall. Since most predictions span more than an hour, these observations are not independent
 (and, of course, even when the prediction changes between two
 hours change, the predictions for these hours come out of the same forecasting process). Over all variables,
@@ -400,6 +434,7 @@ We can now examine the changes in the TAFs.
 
 ```{r plot_changes_goodness, warning=FALSE}
 #| fig-cap: Autocorrelation of changes in predicted goodness of weather conditions
+#| label: fig-changes_goodness
 
 # geom_boxplot gets unhappy about large datasets, so we presummarize
 changes_goodness_hist <- lines_goodness %>%
@@ -425,9 +460,10 @@ print(
 
 ```
 
-We can see that there is clearly a reversionary tendency in changes in TAFs, *i.e.*, if forecasters
-make a change to a TAF, they tend to overrespond to new information. As a first approximation, the
-second and third quantiles of the changes seem to fall between the change remaining as is in the final TAF
+We can see that there clearly is a reversionary tendency in changes in TAFs, *i.e.*, if forecasters
+make a change to a TAF, they tend to overrespond to new information and are likely to back out some
+of their changes in a later TAF. As a first approximation, for quite a few variables, the 
+second and third quartiles of the changes seem to fall between the change remaining as is in the final TAF
 and the change getting fully backed out in the final TAF.
 
 The autocorrelations appear asymmetric, however. With the exception of the lowest cloud base, the tendency of
@@ -460,29 +496,44 @@ colnames(correl_changes_goodness_display) <- c("Variable", "Reversion of improve
 kable(correl_changes_goodness_display, digits = 2)
 ```
 
-We can thus say that the changes in predictions exhibit a mixture of a pessimistc and an overreacting
+(We intentionally do not show *p*-values as the rejection of a null hypothesis that there is not
+a trace of autocorrelation in hundreds of millions of data points would be of very little interest
+and certainly not mean anything "significant." The quantiles shown in @fig-changes_goodness seem much
+more informative to us as to whether the effect is worthwhile to consider.)
+
+We can thus say that the changes in predictions exhibit a mixture of a pessimistic and an overreacting
 bias. Forecasters overreact when they adjust forecasts, but while they overreact strongly for
-worsening predictions, they overreact more mildly for improving predictions. For visibility this is
+worsening predictions, they overreact more mildly for improving predictions.
+
+For visibility this is
 so much so that we can expect improvements in prediction to last essentially unchanged into the final
 TAF. The base of the lowest cloud layer may be an exception to this rule where forecasters are less
-pessimistic than for other variables since this variable has less importance for aviation by instrument
-flight rules (or for bold aviation by visual flight rules).
+pessimistic than for other variables.
 
-If forecast biases are unintentional, one often sees them reduce over time. If they are intentional and
+The degree of pessimism we are seeing may be connected to the potential of a variable to make
+pilots' lives really sour, especially for large, commercial aviation. We see the least degree of pessimism
+in the base of the lowest cloud layer, a variable of relatively little importance to large flight
+operations, although pilots of small aircraft operating under visual flight rules and not wanting to get caught
+above the clouds or having to maneuver around them may care about it. We see the greatest degree of pessimism
+in visibility, where recreational flying might accept nothing worse than a very good prediction, while visibility
+declining to small values can make flying difficult or impossible even for the best-equipped aircraft and aerodromes.
+
+If forecast biases are unintentional, one often sees them reducing over time. If they are intentional and
 serve a purpose, however, they may persist over time, even as users become conscious of them and computer
 models improve. We can thus look at the development of reversionary tendencies in changes to TAFs over time:
 
 ```{r reversion_goodness_time}
+#| fig-cap: Reversion coefficients of changes in predicted goodness of weather conditions over time
 
 correl_changes_goodness_year <- lines_goodness %>%
   mutate(change_from_previous = current - previous,
          change_to_final = final - current) %>%
   group_by(year, variable, change_from_previous, change_to_final) %>%
   summarise(count=sum(count), .groups="drop") %>%
-  mutate(change_increase=pmax(change_from_previous, 0),
-         change_decrease=pmin(change_from_previous, 0)) %>%
+  mutate(improvements=pmax(change_from_previous, 0),
+         deteriorations=pmin(change_from_previous, 0)) %>%
   nest_by(year, variable) %>%
-  mutate(fitVariable = list(lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data = data))) %>%
+  mutate(fitVariable = list(lm(change_to_final ~ improvements + deteriorations + 0, weights = count, data = data))) %>%
   reframe(tidy(fitVariable))
 
 print(
@@ -495,7 +546,8 @@ print(
 )
 
 ```
-It appears that the reversionary tendencies of forecasts remain largely unchanged. This suggests
+It appears that the reversionary tendencies of forecasts remained largely unchanged over
+a decade and a half. This suggests
 that they may be an intentional behavior by forecasters, not an artifact of computer models or
 unintentional bias.
 
@@ -503,7 +555,9 @@ We may finally ask whether reversionary tendencies might be more pronounced at c
 others. For worsening predictions, we see some tendencies that might be explained by different
 weather patterns, but also some where that is at first glance hard to believe. In particular, there is
 a curious effect that worsening predictions in Wyoming seem to be significantly less likely to get
-reversed than in Montana or Colorado.
+reversed than in Montana or Colorado. The Rocky Mountains of Colorado form an island of pessimism with
+worsening predictions very likely to revert, whereas the equally treacherous skiing mountains around
+Lake Tahoe show very low reversion of worsening forecasts.
 
 ```{r reversion_goodness_decrease_place}
 #| fig-cap: Reversion of worsened forecasts by aerodrome
@@ -529,8 +583,9 @@ plot_usmap(fill="grey") +
   scale_colour_gradientn(colours = heat.colors(10)) +
   labs(title = "Reversion of Worsened Forecasts by Aerodrome", colour="Reversion")
 ```
+
 For reversions of improvements in predictions, a cluster of optimism around Boston stands out where
-improvements in predictions are much more likely to get reversed than in New York City:
+improvements in predictions are much more likely to get reversed than in nearby New York City:
 
 ```{r reversion_goodness_increase_place}
 #| fig-cap: Reversion of improved forecasts by aerodrome
@@ -546,13 +601,14 @@ plot_usmap(fill="grey") +
 # Conclusion
 
 It appears that there is indeed autocorrelation in changes to TAFs. Hence, a pilot can glean additional information by not looking only at the most current TAF for the time and place he wants to fly, but also
-at previously issues TAFs for the same time and place. If the prediction worsened, there is grounds for hope
+at previously issued TAFs for the same time and place. If the prediction worsened, there is grounds for hope
 that this worsening will be reversed in the final TAF before he goes flying. If the prediction improved,
-there is grounds for hope that the improvement will hold.
+there is grounds for hope that the improvement will mostly hold, though it is not very likely to be improved
+further.
 
 While TAFs have some power of their own, in particular with respect to flights under instruments rules being
 allowed to take off, what matters most, of course, is not what the final TAF issued for a place and time looks
-like, but how the weather actually turned out. From the interesting patterns we have seen in the evolution
+like, but how the weather actually turns out. From the interesting patterns we have seen in the evolution
 of the forecasts, the relationship between that evolution and eventual weather realizations might be a fertile field for another study.
 
 {{< pagebreak >}}
