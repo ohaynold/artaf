@@ -698,7 +698,7 @@ kable(head(
   arrange(-current) %>% 
   rename(average_wind = current) %>% 
   select(aerodrome, name, average_wind)),
-  col.names = c("Aerodrome", "Name", "Average wind, kts"),
+  col.names = c("Aerodrome", "Name", "Average wind, knots"),
   digits = 1)
 ```
 
@@ -733,19 +733,16 @@ print(
     scale_x_discrete(breaks=c(-30,-25,-20,-15,-10,-5,0,5,10,15,20,25,30), drop=FALSE)
 )
 
-```
-
-We see a significantly larger effect size for the reversion of increases
-in predicted wind speeds than for decreases:
-
-```{r wind_speed_autocorr_lm}
 wind_speed_autocorr <- wind_speed_autocorr %>%
   mutate(change_increase=pmax(change_from_previous, 0),
          change_decrease=pmin(change_from_previous, 0))
 
 wind_speed_lm <- lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data=wind_speed_autocorr)
-summary(wind_speed_lm)
 ```
+
+We see a significantly larger effect size for the reversion of increases
+in predicted wind speeds with a reversion coefficient of `r format(-coef(wind_speed_lm)[1], digits=3)` than for decreases
+with a coefficient of `r format(-coef(wind_speed_lm)[2], digits=3)`.
 
 {{< pagebreak >}} 
 
@@ -874,7 +871,8 @@ Wind speeds with gust are forecast at an average of
 knots.
 
 We see an interesting distribution of wind speeds with gust with the
-typical exponential decay interrupted between 13 and 25 knots, the
+typical exponential decay interrupted between 13 and 25 knots, presumably
+as a consequence of gust only being included above a threshold, then
 proceeding as expected from 25 knots to 70 knots, and ceasing there:
 
 ```{r wind_speed_gust_hist}
@@ -936,7 +934,7 @@ kable(head(
   arrange(-current) %>% 
   rename(average_wind = current) %>% 
   select(aerodrome, name, average_wind)),
-  col.names = c("Aerodrome", "Name", "Average wind with gust, kts"),
+  col.names = c("Aerodrome", "Name", "Average wind with gust, knots"),
   digits = 1)
 ```
 
@@ -946,7 +944,7 @@ kable(head(
 
 ##### Overall
 
-Reductions in predicted wind speeds do not tend to get revised, but
+Reductions in predicted wind speeds do not tend to get revised much, but
 increases mostly get revised:
 
 ```{r wind_speed_gust_autocorr, warning=FALSE}
@@ -971,19 +969,17 @@ print(
     scale_x_discrete(breaks=c(-30,-25,-20,-15,-10,-5,0,5,10,15,20,25,30), drop=FALSE)
 )
 
-```
-
-We see a significantly larger effect size for the reversion of increases
-in predicted wind speeds than for decreases:
-
-```{r wind_speed_gust_autocorr_lm}
 wind_speed_gust_autocorr <- wind_speed_gust_autocorr %>%
   mutate(change_increase=pmax(change_from_previous, 0),
          change_decrease=pmin(change_from_previous, 0))
 
 wind_speed_gust_lm <- lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data=wind_speed_gust_autocorr)
-summary(wind_speed_gust_lm)
+
 ```
+
+We see a significantly larger effect size for the reversion of increases
+in predicted wind speeds with gust with a reversion coefficient of `r format(-coef(wind_speed_gust_lm)[1], digits=3)` than for decreases
+with a coefficient of `r format(-coef(wind_speed_gust_lm)[2], digits=3)`.
 
 {{< pagebreak >}} 
 
@@ -1085,7 +1081,7 @@ ggplot(
   aes(x=-change_increase, y=-change_decrease, label=aerodrome)) +
   geom_text(size=I(2)) +
   theme_bw() +
-  labs(title="Reversion of Predicted Decrease vs. Increase of Wind Speed with Gust by Aerodrome",
+  labs(title="Reversion of Predicted Decrease vs. Increase of Wind Speed with Gust",
        x="Reversion of predicted increase",
        y="Reversion of predicted decrease")
 
@@ -1167,17 +1163,10 @@ print(
     scale_x_discrete(breaks=c(-30,-25,-20,-15,-10,-5,0,5,10,15,20,25,30), drop=FALSE)
 )
 
-```
-
-Thus, our reversionary tendency also becomes weaker as we cannot
-meaningfully distinguish increases and decreases when we take direction
-into account:
-
-```{r wind_speed_directional_autocorr_lm}
-
 wind_speed_directional_lm <- lm(change_to_final ~ change_from_previous + 0, weights = count, data=wind_speed_directional_autocorr)
-summary(wind_speed_directional_lm)
 ```
+
+The reversionary tendency remains with a reversion coefficient of `r format(-coef(wind_speed_lm)[1], digits=3)`.
 
 {{< pagebreak >}} 
 
@@ -1218,7 +1207,8 @@ The distribution is as follows:
 
 #### Extreme values
 
-Again, we see an exponential decline of the frequency of the prediction of extreme values:
+Again, we see an exponential decline of the frequency of the prediction of extreme values with
+the round value of 30 knots being an attractor:
 
 ```{r wind_gust_spread_hist_log, warning=FALSE}
 #| fig-cap: Histogram of gust spread, log scale
@@ -1298,19 +1288,18 @@ print(
     scale_x_discrete(breaks=c(-25,-20,-15,-10,-5,0,5,10,15,20,25), drop=FALSE)
 )
 
-```
-
-We see a significantly larger effect size for the reversion of increases
-in predicted gust spreads than for decreases:
-
-```{r wind_gust_spread_autocorr_lm}
 wind_gust_spread_autocorr <- wind_gust_spread_autocorr %>%
   mutate(change_increase=pmax(change_from_previous, 0),
          change_decrease=pmin(change_from_previous, 0))
 
 wind_gust_spread_lm <- lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data=wind_gust_spread_autocorr)
-summary(wind_gust_spread_lm)
+
 ```
+
+
+We see a significantly larger effect size for the reversion of increases
+in predicted gust spreads with a reversion coefficient of `r format(-coef(wind_gust_spread_lm)[1], digits=3)` than for decreases
+with a coefficient of `r format(-coef(wind_gust_spread_lm)[2], digits=3)`.
 
 {{< pagebreak >}} 
 
@@ -1506,19 +1495,17 @@ print(
     scale_x_discrete(breaks=c(-125,-100,-75,-50,-25,0,25,50,75,100,125), drop=FALSE)
 )
 
-```
-
-We see similar effect sizes for the reversion of increases and decreases
-of predicted lowest cloud layer:
-
-```{r clouds_lowest_autocorr_lm}
 clouds_lowest_autocorr <- clouds_lowest_autocorr %>%
   mutate(change_increase=pmax(change_from_previous, 0),
          change_decrease=pmin(change_from_previous, 0))
 
 clouds_lowest_lm <- lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data=clouds_lowest_autocorr)
-summary(clouds_lowest_lm)
+
 ```
+
+We see similar effect sizes for the reversion of increases and decreases
+of predicted lowest cloud layer with a reversion coefficient of `r format(-coef(clouds_lowest_lm)[1], digits=3)` for increases
+and `r format(-coef(clouds_lowest_lm)[2], digits=3)` for decreases.
 
 {{< pagebreak >}} 
 
@@ -1557,7 +1544,7 @@ print(
 ##### By aerodrome
 
 We break down the tendency of changes in predicted visibility to revert
-by aerodrome. There in an interest West-to-East gradient in reversion of
+by aerodrome. There is an interest West-to-East gradient in reversion of
 increases:
 
 ```{r clouds_lowest_autocorr_aerodrome_increase}
@@ -1708,19 +1695,17 @@ print(
     scale_x_discrete(breaks=c(-125,-100,-75,-50,-25,0,25,50,75,100,125), drop=FALSE)
 )
 
-```
-
-For the ceiling, different from the lowest layer, we see somewhat of a
-tendency for decreases to revert more than increases do:
-
-```{r clouds_ceiling_autocorr_lm}
 clouds_ceiling_autocorr <- clouds_ceiling_autocorr %>%
   mutate(change_increase=pmax(change_from_previous, 0),
          change_decrease=pmin(change_from_previous, 0))
 
 clouds_ceiling_lm <- lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data=clouds_ceiling_autocorr)
-summary(clouds_ceiling_lm)
+
 ```
+
+For the ceiling, different from the lowest layer, we see somewhat of a
+tendency for decreases to revert more than increases do with a reversion coefficient of `r format(-coef(clouds_ceiling_lm)[1], digits=3)` for increases
+and `r format(-coef(clouds_ceiling_lm)[2], digits=3)` for decreases.
 
 {{< pagebreak >}} 
 
@@ -1942,19 +1927,17 @@ print(
     scale_x_discrete(breaks=c(-2,-1,0,1,2), drop=FALSE)
 )
 
-```
-
-We see a significantly larger effect size for the reversion of decreases
-in predicted visbility than for increases:
-
-```{r visbility_autocorr_lm}
 visibility_autocorr <- visibility_autocorr %>%
   mutate(change_increase=pmax(change_from_previous, 0),
          change_decrease=pmin(change_from_previous, 0))
 
 visibility_lm <- lm(change_to_final ~ change_increase + change_decrease + 0, weights = count, data=visibility_autocorr)
-summary(visibility_lm)
 ```
+
+
+We see a significantly larger effect size for the reversion of decreases
+in predicted visbility than for increases with a reversion coefficient of `r format(-coef(visibility_lm)[1], digits=3)` for increases
+and `r format(-coef(visibility_lm)[2], digits=3)` for decreases.
 
 {{< pagebreak >}} 
 
