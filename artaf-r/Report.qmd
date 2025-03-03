@@ -151,7 +151,7 @@ for humans being too conservative in their updates, *i.e.,* not taking
 new information fully into account, and well as for being too aggressive
 in their updates, with a variety of explanations of both phenomena.
 [@ward1968; @griffin1992; @barberis1998; @kahneman1973; @debondt1985;
-@daniel1998] We can define an efficent
+@daniel1998] We can define an efficient
 forecast as one that takes into account all information available at the
 time the forecast is made. [@nordhaus1987; @coibion2012] If a forecast
 is efficient in this sense, there is no additional information to be
@@ -166,7 +166,7 @@ is a well-documented "wet bias" toward predicting rain. [@bickel2008] This
 bias can be quite drastic, such as with predictions of a 20% chance of
 rain only materializing in about 5% of cases. [@silver2012] One can
 easily hypothesize a plausible reason for such bias in what in
-quantiative finance would be called the pricing kernel, *i.e.,* an
+quantitative finance would be called the pricing kernel, *i.e.,* an
 adjustment to weights in the probability space according to the
 unpleasantry of the event. Consumers of the weather report may be
 unhappier about getting wet because it rains and they did not take an
@@ -176,7 +176,7 @@ false forecast of dry weather than they get at a false forecast of rain.
 If this is so, the forecaster may well advance consumer happiness and
 thus his career by exhibiting a bias for forecasting rain. Indeed, we may
 conversely view the equivalent martingale measure of risk-neutral asset
-pricing as a consenses 'wet bias' negotiated through trading applied to the 
+pricing as a consensus 'wet bias' negotiated through trading applied to the 
 real-world probability space of outcomes.
 
 Studies on weather forecast biases have typically focused on biases in the 
@@ -546,7 +546,7 @@ print(
 )
 
 ```
-It appears that the reversionary tendencies of forecasts remained largely unchanged over
+It appears that the reversionary tendencies of forecasts have remained largely unchanged over
 a decade and a half. This suggests
 that they may be an intentional behavior by forecasters, not an artifact of computer models or
 unintentional bias.
