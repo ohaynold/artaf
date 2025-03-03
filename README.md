@@ -100,4 +100,7 @@ You can add your own configurations to [config/config.yaml](config/config.yaml).
 ## Testing
 
 The script `./run_tests.sh` will run the various function tests we provide and create test results as well as a
-coverage report.
+coverage report. Some of the tests require some test data, so if you run this on a clean install, running the tests
+will also download the entire dataset from Zenodo, which may take a little while. If you only want to run the tests,
+but have no interest in the data set, you can `mkdir -p data/raw`, in which case only the small data set used for
+testing will be downloaded.
