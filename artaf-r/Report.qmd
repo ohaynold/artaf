@@ -4,7 +4,7 @@ author:
 - Oliver M. Haynold
 - Neal Ylitalo
 # date: "`r Sys.Date()`"
-date: "3 March 2025"
+date: "2025-03-03"
 output: pdf_document
 keep_tex: true
 header-includes:
@@ -277,7 +277,7 @@ analysis in hourly intervals, we felt it safest to leave them out as well.
 ## Variables considered
 
 For our analyses, we parsed the TAFs we obtained and looked at the most pertinent 
-(semi-, since they are reported as integers with rounding) continuous variables 
+(approximately, since they are reported as integers with rounding) continuous variables 
 for flight/no flight decisions:
 
 Wind speed without gusts
@@ -422,7 +422,7 @@ Overall, this gives us `r format(sum(lines_goodness$count[lines_goodness$variabl
 observations of pairs of changes in TAFs for a given hour for each variable, or `r format(sum(lines_goodness$count), big.mark=",")`
 pairs of changes overall. Since most predictions span more than an hour, these observations are not independent
 (and, of course, even when the prediction changes between two
-hours change, the predictions for these hours come out of the same forecasting process). Over all variables,
+hours are different, the predictions for these hours come out of the same forecasting process). Over all variables,
 `r format(sum(lines_goodness$count[lines_goodness$current!=lines_goodness$previous]), big.mark=",")` records
 involve a non-zero change between the previous and the current predictions.
 
@@ -431,7 +431,8 @@ involve a non-zero change between the previous and the current predictions.
 
 # Results
 
-We can now examine the changes in the TAFs.
+We can now examine the changes in the TAFs. We show a box plot with quartiles of changes to the final TAF after
+a prediction in a TAF for a given time and place has changed by a certain amount of goodness:
 
 ```{r plot_changes_goodness, warning=FALSE}
 #| fig-cap: Autocorrelation of changes in predicted goodness of weather conditions
@@ -463,7 +464,8 @@ print(
 
 We can see that there clearly is a reversionary tendency in changes in TAFs. If forecasters
 make a change to a TAF, they tend to overrespond to new information and are likely to back out some
-of their changes in a later TAF. As a first approximation, for quite a few variables, the 
+of their changes in a later TAF. (The forecaster is an abstraction here. With them working in shifts,
+successive updates need not be made by the same person.) As a first approximation, for quite a few variables, the 
 second and third quartiles of the changes seem to fall between the change remaining as is in the final TAF
 and the change getting fully backed out in the final TAF.
 
@@ -506,10 +508,11 @@ Thus changes in predictions exhibit a mixture of a pessimistic and an overreacti
 bias. Forecasters overreact when they adjust forecasts, but while they overreact strongly to
 worsening predictions, they overreact more mildly to improving predictions.
 
-For visibility this is
+For visibility, the variable where forecasters are most pessimistic in their updates, this is
 so much so that we can expect improvements in prediction to last essentially unchanged into the final
-TAF. The base of the lowest cloud layer may be an exception to this rule where forecasters are less
-pessimistic than for other variables.
+TAF, whereas worsenings will be backed out by two thirds on average. The base of the lowest 
+cloud layer may be an exception to this rule where forecasters are much less
+pessimistic than for other variables, although they are still overresponding.
 
 The degree of pessimism we are seeing may be connected to the potential of a variable to make
 pilots' lives really sour, especially for large, commercial aviation. We see the least degree of pessimism
@@ -553,7 +556,9 @@ that they may be an intentional behavior by forecasters, not an artifact of comp
 unintentional bias.
 
 We may finally ask whether reversionary tendencies might be more pronounced at certain places than
-others. For worsening predictions, we see some tendencies different
+others.
+
+For worsening predictions, we see some tendencies different
 weather patterns might explain, but also some where that is at first glance hard to believe. In particular, there is
 a curious effect that worsening predictions in Wyoming seem to be significantly less likely to get
 reversed than in Montana or Colorado. The Rocky Mountains of Colorado form an island of pessimism with
@@ -833,7 +838,9 @@ plot_usmap(fill="grey") +
 #### Reversion of predicted increases *vs.* decreases
 
 We do not see much correlation between reversionary tendencies for
-increases and decreases in predicted wind speed.
+increases and decreases in predicted wind speed, although we note that
+the corner of very low reversion of both improvements and deteriorations is
+occupied, whereas the corner of very high reversion for both is not.
 
 ```{r wind_speed_autocorr_aerodrome_increase_decrease}
 #| fig-cap: Reversion of predicted decrease *vs.* increase of wind speed by aerodrome
