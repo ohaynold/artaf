@@ -53,6 +53,7 @@ abstract: >
    they tend to back out some of their changes in a later TAF. This tendency is
    much more pronounced when forecasters worsen a forecast than when they improve it.
 keywords:
+  - "TAFs"
   - "terminal aerodrome forecasts"
   - "weather forecasting accuracy"
   - "meteorological biases"
