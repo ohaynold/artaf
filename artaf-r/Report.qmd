@@ -317,7 +317,7 @@ on factors such as the aircraft involved, whether the flight is conducted under 
 need not be a monotonic function of its value. For example, some headwind is advantageous for a takeoff or
 landing. However, crosswinds and tailwinds are not. For simplicity, we treat the goodness of wind as monotonic
 and say that less wind is better. For cloud layers and visibility, larger distances are, of course, better, so
-for these variables, it's easy.
+for these variables, it is easy.
 
 We then transform our variables by sigmoid curves as follows:
 
@@ -1439,8 +1439,8 @@ with peaks at the round numbers of 10,000 feet and 15,000 feet.
 
 In the geographic distribution, we are seeing a distinct cluster of few
 low clouds in the sunny Southwest. We are showing the median instead of
-the average since the top value of 18,000 that is also taken for clear
-skies is an arbitrary choice.
+the average since the top value of 18,000 feet, which is also taken for clear
+skies, is an arbitrary choice.
 
 ```{r clouds_lowest_map}
 #| fig-cap: Median lowest cloud layer base by aerodrome
@@ -1471,8 +1471,8 @@ is not the same as a change from 1,000 feet to 500 feet, we look at
 changes in the squre root of the altitude of the lowest cloud layer,
 taking clear skies or anything above 18,000 feet AGL as 18,000 feet.
 
-Predicted changes in cloud layer on the median don't tend to get
-revised, but if they do get revidsed it's most often a reversion,
+Predicted changes in cloud layer on the median do not tend to get
+revised, but if they do get revidsed it is most often a reversion,
 whether for predicted increases or decreases:
 
 ```{r clouds_lowest_autocorr, warning=FALSE}
@@ -1545,7 +1545,7 @@ print(
 ##### By aerodrome
 
 We break down the tendency of changes in predicted visibility to revert
-by aerodrome. There is an interest West-to-East gradient in reversion of
+by aerodrome. There is an interesting West-to-East gradient in reversion of
 increases:
 
 ```{r clouds_lowest_autocorr_aerodrome_increase}
@@ -1575,8 +1575,8 @@ plot_usmap(fill="grey") +
 
 ```
 
-For reversion of decreases, Florida and the Gulf Coast together with
-Wyoming form an interesting cluster of lower tendency to revert:
+For reversion of decreases, Florida and the Gulf Coast, together with
+Wyoming, form an interesting cluster of lower tendency to revert:
 
 ```{r clouds_lowest_autocorr_aerodrome_decrease}
 #| fig-cap: Reversion of decreases in predicted lowest cloud layer by aerodrome
@@ -1671,8 +1671,8 @@ is not the same as a change from 1,000 feet to 500 feet, we look at
 changes in the squre root of the altitude of the ceiling, taking clear
 skies or anything above 18,000 feet AGL as 18,000 feet.
 
-Predicted changes in ceiling on the median don't tend to get revised,
-but if they do get revised it's most often a reversion, whether for
+Predicted changes in ceiling on the median do not tend to get revised,
+but if they do get revised, it is most often a reversion, whether for
 predicted increases or decreases:
 
 ```{r clouds_ceiling_autocorr, warning=FALSE}
@@ -1705,7 +1705,7 @@ clouds_ceiling_lm <- lm(change_to_final ~ change_increase + change_decrease + 0,
 ```
 
 For the ceiling, different from the lowest layer, we see somewhat of a
-tendency for decreases to revert more than increases do with a reversion coefficient of `r format(-coef(clouds_ceiling_lm)[1], digits=3)` for increases
+tendency for decreases to revert more than increases do, with a reversion coefficient of `r format(-coef(clouds_ceiling_lm)[1], digits=3)` for increases
 and `r format(-coef(clouds_ceiling_lm)[2], digits=3)` for decreases.
 
 {{< pagebreak >}} 
@@ -1902,7 +1902,7 @@ kable(head(
 
 Since a change of visibility from 5 miles to 4.5 miles clearly is not
 the same as a change from 1 mile to 0.5 miles, we look at changes in the
-squre root of visibility.
+square root of visibility.
 
 Improvements in predicted visibility do not tend to get revised, but
 decreases mostly get revised:
@@ -1937,7 +1937,7 @@ visibility_lm <- lm(change_to_final ~ change_increase + change_decrease + 0, wei
 
 
 We see a significantly larger effect size for the reversion of decreases
-in predicted visbility than for increases with a reversion coefficient of `r format(-coef(visibility_lm)[1], digits=3)` for increases
+in predicted visibility than for increases, with a reversion coefficient of `r format(-coef(visibility_lm)[1], digits=3)` for increases
 and `r format(-coef(visibility_lm)[2], digits=3)` for decreases.
 
 {{< pagebreak >}} 
