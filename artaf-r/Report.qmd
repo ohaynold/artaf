@@ -606,7 +606,8 @@ plot_usmap(fill="grey") +
 ```
 # Conclusion
 
-It appears that there is indeed autocorrelation in changes to TAFs. Hence, a pilot can glean additional information by not looking only at the most current TAF for the time and place he wants to fly but also
+It appears that there is indeed autocorrelation in changes to TAFs. Hence, a pilot can glean additional information by 
+not only looking at the most current TAF for the time and place he wants to fly but also
 at previously issued TAFs for the same time and place. If the prediction worsened, there are grounds for hope
 that this worsening will be reversed in the final TAF before he goes flying. If the prediction improved,
 there are grounds for hope that the improvement will mostly hold, though it is not very likely to be improved
@@ -614,7 +615,7 @@ further.
 
 While TAFs have some power of their own, in particular concerning flights under instruments rules being
 allowed to take off, what matters most, of course, is not what the final TAF issued for a place and time looks
-like, but how the weather actually turns out. From the interesting patterns we have seen in the evolution
+like but how the weather actually turns out. From the interesting patterns we have seen in the evolution
 of the forecasts, the relationship between that evolution and eventual weather realizations might be a fertile field for another study.
 
 {{< pagebreak >}}
