@@ -3,7 +3,8 @@ title: "Autoregressive Behavior of Aviation Weather Forecasts"
 author:
 - Oliver M. Haynold
 - Neal Ylitalo
-date: "`r Sys.Date()`"
+# date: "`r Sys.Date()`"
+date: "3 March 2025"
 output: pdf_document
 keep_tex: true
 header-includes:

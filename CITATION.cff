@@ -11,7 +11,7 @@ authors:
 title: "Autoregressive Behavior of Aviation Weather Forecasts (Software)"
 version: 1.0
 doi: "10.5281/zenodo.14954562"
-date-released: 2025-03-04
+date-released: 2025-03-03
 url: "https://github.com/ohaynold/artaf"
 license: "MIT"
 preferred-citation:
@@ -24,7 +24,7 @@ preferred-citation:
           given-names: "Neal"
           orcid: "https://orcid.org/0009-0003-0357-8916"
     title: "Autoregressive Behavior of Aviation Weather Forecasts"
-    date-released: 2025-03-04
+    date-released: 2025-03-03
     doi: "10.5281/zenodo.14954569"
     license: "CC-BY-4.0"
 references:
