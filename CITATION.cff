@@ -14,6 +14,7 @@ doi: "10.5281/zenodo.14954562"
 date-released: 2025-03-03
 url: "https://github.com/ohaynold/artaf"
 license: "MIT"
+repository-code: "https://github.com/ohaynold/artaf"
 preferred-citation:
     type: report
     authors:
@@ -24,9 +25,16 @@ preferred-citation:
           given-names: "Neal"
           orcid: "https://orcid.org/0009-0003-0357-8916"
     title: "Autoregressive Behavior of Aviation Weather Forecasts"
+    version: 1.0
     date-released: 2025-03-03
     doi: "10.5281/zenodo.14954569"
     license: "CC-BY-4.0"
+    abstract: >
+        We analyze U.S. Terminal Aerodrome Forecasts (TAFs) for autocorrelation of forecast
+        changes for a given aerodrome and hour between successive forecasts.
+        We find a pessimistic and overreacting bias. When forecasters adjust a TAF,
+        they tend to back out some of their changes in a later TAF. This tendency is
+        much more pronounced when forecasters worsen a forecast than when they improve it.
 references:
   -   type: data
       authors:
